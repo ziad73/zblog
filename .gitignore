@@ -1,0 +1,52 @@
+##   Core .NET Build Artifacts
+bin/
+obj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+##   User Secrets & Local AppSettings Configuration
+# Protects your local DB connection strings and API keys
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+
+##   IDE-Specific Temp Files (Visual Studio & VS Code)
+.vs/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln.docstates
+
+##   Rider / JetBrains Temp Files
+.idea/
+*.sln.iml
+
+##   Entity Framework Migration Idempotency Cache
+*.mpconfig
+
+##   Package Management and Cache Folders
+# Prevents pulling thousands of downloaded NuGet packages into Git
+.nuget/
+packages/
+*.nuget.props
+*.nuget.targets
+
+##   Operating System Temp Files
+# Windows temp layout files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS metadata indexing temp files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux temp files
+*~
+.fuse_hidden*
+.directory
+.Trash-*
