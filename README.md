@@ -1,226 +1,160 @@
-# BlogAPI Project
+# ZBlogAPI
 
-## Introduction
+A RESTful backend service for a blogging platform — user registration & auth, blog post publishing, nested comments, and likes on posts/comments. Built with **ASP.NET Core Web API (.NET 8)** and **PostgreSQL**.
 
-Welcome to the BlogAPI project! This project is a simple yet robust blog API built with .NET 8, Entity Framework Core, and ASP.NET Core Identity.
-The API allows users to register, login, create blog posts, comment on blog posts and other comments, and like blog posts and comments.
-This project demonstrates a clean architecture and best practices in building a RESTful API.
+---
 
 ## Features
 
-- User registration and authentication using ASP.NET Core Identity
-- CRUD operations for blog posts
-- Nested comments on blog posts and other comments
-- Like functionality for blog posts and comments with unique constraints
-- Role-based authorization for managing blog content
+- **Authentication & Authorization** — ASP.NET Core Identity with role-based access control (`Member`, `Author`, `Admin`)
+- **Blog Posts** — full CRUD with soft delete and ownership checks
+- **Nested Comments** — arbitrary-depth threaded replies on posts and other comments
+- **Likes** — like/unlike posts or comments, with strict duplicate-like prevention
+- **Soft Deletion** — posts and comments are soft-deleted for auditability and recoverability
+- **Self-Documenting API** — Swagger/OpenAPI available at `/swagger`
 
-## Technologies
+## Non-Goals (v1)
 
-- **ASP.NET Core:** ASP.NET Core is a cross-platform framework for building modern, cloud-based, and internet-connected applications.
+- Rich text/media pipeline for post content
+- Real-time notifications (likes/comments)
+- Multi-tenant support
 
-- **Entity Framework:** Entity Framework (EF) is an ORM for .NET that simplifies data access by allowing developers to work with database objects using .NET objects.
+---
 
-- **Identity Framework:** ASP.NET Core Identity is a membership system that supports user authentication, authorization, and management.
+## Tech Stack
 
-- **MsSQL:** Microsoft SQL Server (MsSQL) is a relational database management system that provides high performance, security, and data integrity.
+| Layer | Technology |
+|---|---|
+| Framework | ASP.NET Core Web API (.NET 8) |
+| ORM | Entity Framework Core (`Npgsql` provider) |
+| Database | PostgreSQL |
+| Auth | ASP.NET Core Identity (role-based) |
+| Docs | Swagger / OpenAPI |
 
-- **Swagger:** Swagger is a tool for designing, building, and documenting RESTful APIs with a user-friendly interface for testing endpoints.
+---
 
-## Project Structure
+## Target Users
 
-```maths
-    BlogAPI-SoftITO/
-    ├── Controllers/
-    ├── Data/
-    ├── Entities/
-    │ ├── Models/
-    │ ├── DTOs/
-    ├── Migrations/
-    ├── Properties/
-```
+- **Readers/Members** — registered users who read, comment, and like content
+- **Authors** — users authorized to create and manage their own blog posts
+- **Admins/Moderators** — role-based users who can manage any content (moderation, takedowns)
 
-- **Controllers:** Contains the API controllers for handling HTTP requests.
-- **DTOs:** Data Transfer Objects for transferring data between client and server.
-- **Models:** Entity models representing the database schema.
-- **Data:** Database context and configuration for Entity Framework Core.
+---
 
 ## Getting Started
 
 ### Prerequisites
 
-- .NET 8 SDK
-- MsSQL Server (or any other compatible database)
-- Visual Studio or VS Code
+- [.NET 8 SDK](https://dotnet.microsoft.com/download)
+- PostgreSQL 14+
 
-### Installation
+### Setup
 
-1. Clone the repository:
+```bash
+# Clone the repo
+git clone <repo-url>
+cd BlogAPI
 
-   ```bash
-   git clone https://github.com/denizciMert/BlogAPI.git
-   ```
+# Restore dependencies
+dotnet restore
 
-2. Set up the database connection string in appsettings.json:
+# Update connection string in appsettings.json / appsettings.Development.json
+# "ConnectionStrings:DefaultConnection": "Host=localhost;Database=blogapi;Username=postgres;Password=yourpassword"
 
-   ```json
-   {
-     "Logging": {
-       "LogLevel": {
-         "Default": "Information",
-         "Microsoft.AspNetCore": "Warning"
-       }
-     },
-     "AllowedHosts": "*",
-     "ConnectionStrings": {
-       "ApplicationDbContext": "YourConnectionString"
-     }
-   }
-   ```
+# Apply EF Core migrations
+dotnet ef database update
 
-3. Build and run the project:
+# Run the API
+dotnet run
+```
 
-   ```bash
-   dotnet build
-   ```
+Once running, Swagger UI is available at:
 
-   ```bash
-   dotnet run
-   ```
+```
+https://localhost:<port>/swagger
+```
 
-## API Endpoints
+---
 
-### Account Management
+## API Reference
 
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Endpoint</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>POST</td>
-<td>/api/account/register</td>
-<td>Register a new user</td>
-</tr>
-<tr>
-<td>POST</td>
-<td>/api/account/login</td>
-<td>Login a user</td>
-</tr>
-<tr>
-<td>POST</td>
-<td>/api/account/logout</td>
-<td>Logout the current user</td>
-</tr>
-</tbody>
-</table>
+### Account
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| POST | `/api/account/register` | Register a new user | Public |
+| POST | `/api/account/login` | Authenticate a user, issue session/token | Public |
+| POST | `/api/account/logout` | Terminate the current session | Authenticated |
+
+- Passwords are hashed, never stored in plaintext.
+- Email and username must be unique.
+- Roles (`Member`, `Author`, `Admin`) are assigned at registration or via admin promotion.
 
 ### Blog Posts
 
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Endpoint</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GET</td>
-<td>/api/blogpost</td>
-<td>Get all blog posts</td>
-</tr>
-<tr>
-<td>GET</td>
-<td>/api/blogpost/{id}</td>
-<td>Get a single blog post by ID</td>
-</tr>
-<tr>
-<td>POST</td>
-<td>/api/blogpost</td>
-<td>Create a new blog post (authorized users only)</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td>/api/blogpost/{id}</td>
-<td>Update a blog post (authorized users only)</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td>/api/blogpost/{id}</td>
-<td>Soft delete a blog post (authorized users only)</td>
-</tr>
-</tbody>
-</table>
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| GET | `/api/blogpost` | List all blog posts (excludes soft-deleted) | Public |
+| GET | `/api/blogpost/{id}` | Get a single blog post | Public |
+| POST | `/api/blogpost` | Create a new blog post | Authorized |
+| PUT | `/api/blogpost/{id}` | Update a blog post (owner or Admin) | Authorized |
+| DELETE | `/api/blogpost/{id}` | Soft delete a blog post (owner or Admin) | Authorized |
+
+- Only the post's author or an `Admin` may update/delete it.
+- Soft-deleted posts are excluded from all public queries.
+- Each post tracks `created_at` and `updated_at`.
 
 ### Comments
 
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Endpoint</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GET</td>
-<td>/api/comments</td>
-<td>Get all comments</td>
-</tr>
-<tr>
-<td>GET</td>
-<td>/api/comments/{id}</td>
-<td>Get a single comment by ID</td>
-</tr>
-<tr>
-<td>POST</td>
-<td>/api/comments</td>
-<td>Create a new comment (authorized users only)</td>
-</tr>
-<tr>
-<td>PUT</td>
-<td>/api/comments/{id}</td>
-<td>Update a comment (authorized users only)</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td>/api/comments/{id}</td>
-<td>Soft delete a comment (authorized users only)</td>
-</tr>
-</tbody>
-</table>
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| GET | `/api/comments` | List all comments (excludes soft-deleted) | Public |
+| GET | `/api/comments/{id}` | Get a single comment | Public |
+| POST | `/api/comments` | Create a comment on a post or another comment | Authorized |
+| PUT | `/api/comments/{id}` | Update a comment (owner or Admin) | Authorized |
+| DELETE | `/api/comments/{id}` | Soft delete a comment (owner or Admin) | Authorized |
+
+- A comment belongs to exactly one blog post (directly or via its parent chain).
+- A comment may optionally have a `parent_comment_id`, enabling arbitrary-depth nested replies.
+- Soft-deleting a parent comment does not delete its children — children remain visible with a "[deleted]" placeholder for the parent *(pending stakeholder confirmation — see [Open Questions](#open-questions))*.
 
 ### Likes
 
-<table>
-<thead>
-<tr>
-<th>Method</th>
-<th>Endpoint</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>POST</td>
-<td>/api/likes</td>
-<td>Like a blog post or comment (authorized users only)</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td>/api/likes</td>
-<td>Unlike a blog post or comment (authorized users only)</td>
-</tr>
-</tbody>
-</table>
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| POST | `/api/likes` | Like a blog post or a comment | Authorized |
+| DELETE | `/api/likes` | Unlike a blog post or a comment | Authorized |
 
-## Acknowledgements
+- A like target must be exactly one of: a blog post, or a comment.
+- A user may like a given post/comment at most once (enforced via a unique constraint).
+- Unliking hard-deletes the like record (likes carry no historical value).
 
-- This project was developed as part of the backend program at <a href="https://softito.com.tr/index.php" rel="nofollow">Softito Yazılım - Bilişim Akademisi</a>.
-- Special thanks to the instructors and peers who provided valuable feedback and support throughout the development process.
+---
+
+## Authorization Model
+
+| Role | Permissions |
+|---|---|
+| Member | Register, log in, comment, like/unlike |
+| Author | All Member permissions + create/update/soft-delete own posts |
+| Admin | All permissions on all content (moderation) |
+
+---
+
+## Non-Functional Requirements
+
+- **Data Integrity** — foreign keys enforced at the database level; unique constraints on likes and account fields.
+- **Auditability** — `created_at` / `updated_at` on all major entities; soft-delete flags (`is_deleted`, `deleted_at`) on posts and comments.
+- **Documentation** — Swagger/OpenAPI at `/swagger`.
+
+---
+
+## Roadmap
+
+| Milestone | Scope |
+|---|---|
+| M1 | Core schema + migrations on PostgreSQL, Identity wiring, register/login/logout |
+| M2 | Blog post CRUD + soft delete + Swagger docs |
+| M3 | Nested comments CRUD + soft delete |
+| M4 | Likes (posts + comments) with constraint enforcement |
+| M5 | Role-based authorization hardening + tests |
