@@ -2,8 +2,14 @@ using Entities;
 
 namespace Repositories
 {
-  public interface ILikeRepository : IRepository<Like>
+  public interface ILikeRepository
   {
+    Task<Like?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<List<Like>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task AddAsync(Like entity, CancellationToken cancellationToken = default);
+    void Update(Like entity);
+    void Delete(Like entity);
+
   // ILikeRepository
   // duplicate-like checks
   // like/unlike by post
