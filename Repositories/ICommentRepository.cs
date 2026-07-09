@@ -2,8 +2,14 @@ using Entities;
 
 namespace Repositories
 {
-  public interface ICommentRepository : IRepository<Comment>
+  public interface ICommentRepository
   {
+    Task<Comment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<List<Comment>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task AddAsync(Comment entity, CancellationToken cancellationToken = default);
+    void Update(Comment entity);
+    void Delete(Comment entity);
+
   // ICommentRepository
   // post-thread retrieval
   // soft delete
