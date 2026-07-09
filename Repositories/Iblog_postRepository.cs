@@ -2,8 +2,14 @@ using Entities;
 
 namespace Repositories
 {
-  public interface Iblog_postRepository : IRepository<blog_post>
+  public interface Iblog_postRepository
   {
+    Task<blog_post?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<List<blog_post>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task AddAsync(blog_post entity, CancellationToken cancellationToken = default);
+    void Update(blog_post entity);
+    void Delete(blog_post entity);
+
   // Iblog_postRepository
   // soft delete
   // active list
