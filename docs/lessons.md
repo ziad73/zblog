@@ -1,0 +1,3 @@
+- No need for Repository Pattern
+- Clean Arch stuff
+- Record(Positional Record style, One-Liner Syntax) alt for class DTOs && add data annotations as you want!
