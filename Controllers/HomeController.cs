@@ -1,14 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Controllers
+namespace Controllers;
+
+public class HomeController : Controller
 {
-  public class HomeController : Controller
+  [HttpGet("/")]
+  public IActionResult Index()
   {
-    [HttpGet("/")]
-    public IActionResult Index()
-    {
-      return Content("Hello, World!");
-    }
+    return Content("Hello, World!");
   }
-  
 }

@@ -36,7 +36,7 @@ A RESTful backend service for a blogging platform — user registration & auth, 
 ## Target Users
 
 - **Readers/Members** — registered users who read, comment, and like content
-- **Authors** — users authorized to create and manage their own blog posts
+- **Authors** — users authorized to create and manage their own blog posts, gets role by applying to become a writer button from dashboard.
 - **Admins/Moderators** — role-based users who can manage any content (moderation, takedowns)
 
 ---
@@ -78,13 +78,13 @@ https://localhost:<port>/swagger
 
 ## API Reference
 
-### Account
+### Auth
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/api/account/register` | Register a new user | Public |
-| POST | `/api/account/login` | Authenticate a user, issue session/token | Public |
-| POST | `/api/account/logout` | Terminate the current session | Authenticated |
+| POST | `/api/auth/register` | Register a new user | Public |
+| POST | `/api/auth/login` | Authenticate a user, issue session/token | Public |
+| POST | `/api/auth/logout` | Terminate the current session | Authenticated |
 
 - Passwords are hashed, never stored in plaintext.
 - Email and username must be unique.
@@ -143,7 +143,7 @@ https://localhost:<port>/swagger
 
 ## Non-Functional Requirements
 
-- **Data Integrity** — foreign keys enforced at the database level; unique constraints on likes and account fields.
+- **Data Integrity** — foreign keys enforced at the database level; unique constraints on likes and auth fields.
 - **Auditability** — `created_at` / `updated_at` on all major entities; soft-delete flags (`is_deleted`, `deleted_at`) on posts and comments.
 - **Documentation** — Swagger/OpenAPI at `/swagger`.
 

@@ -1,7 +1,7 @@
-namespace Entities
+using Microsoft.AspNetCore.Identity;
+
+namespace Entities;
+public class user_role:IdentityRole<Guid>
 {
-  public class user_role
-  {
-  }
-  
+  // Id, Name, NormalizedName, ConcurrencyStamp
 }

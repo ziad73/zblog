@@ -1,23 +1,25 @@
 using Database;
+using Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Repositories;
 using Serilog;
+using Services.Auth;
+using Services.Auth.Contracts;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Register services into DI container
 builder.Services.AddControllers();
-// db as a service
-builder.Services.AddDbContext<ZBlogDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Register services into DI container
+// Authservices
+builder.Services.AddScoped<IAuthServices, AuthServices>();
 
-// repository as a service
-// no need to register IRepository<T> as a service, just use it directly
-builder.Services.AddScoped<Iblog_postRepository, blog_postRepository>();
-builder.Services.AddScoped<ICommentRepository, CommentRepository>();
-builder.Services.AddScoped<ILikeRepository, LikeRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();// to avoid exposing DbContext in services
+// db as a service
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 //Logging: Serilog
 builder.Host.UseSerilog((HostBuilderContext context, IServiceProvider services, LoggerConfiguration loggerConfiguration) => {
@@ -26,6 +28,46 @@ builder.Host.UseSerilog((HostBuilderContext context, IServiceProvider services, 
  .ReadFrom.Configuration(context.Configuration) //read configuration settings from built-in IConfiguration
  .ReadFrom.Services(services); //read out current app's services and make them available to serilog
 } );
+
+
+// Register identity services into DI Container
+builder.Services.AddIdentity<User, user_role>(options => {
+
+options.Password.RequiredLength = 4; 
+options.Password.RequireNonAlphanumeric = false; 
+options.Password.RequireUppercase = false; 
+options.Password.RequireLowercase = false; 
+options.Password.RequireDigit = false; 
+options.Password.RequiredUniqueChars = 2;
+   
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders()
+/* userManager uses UserStore and RoleStore internally.
+   CreateAsync() uses UserStore to create a new user in the database, so on. 
+   initialize repositories for user and role management.*/
+.AddUserStore<UserStore<User, user_role, ApplicationDbContext, Guid>>()
+.AddRoleStore<RoleStore<user_role, ApplicationDbContext, Guid>>();
+
+// Authorization configuration
+builder.Services.AddAuthorization(options =>
+{
+   options.FallbackPolicy = new AuthorizationPolicyBuilder()
+      // Require an authenticated user for all endipoints, unless you explicitly specified [AllowAnonymous].
+      .RequireAuthenticatedUser() 
+      .Build();
+});
+
+// --------------------------------------------------------------------------------
+
+// cookie authentication configuration
+builder.Services.ConfigureApplicationCookie(options =>
+{
+   options.Cookie.Name = "ZBlogCookie"; // change this to something more unique
+   // Redirect unauthenticated users
+   options.LoginPath = "/Account/Login"; 
+   options.AccessDeniedPath = "/Account/AccessDenied";
+});
 
 var app = builder.Build();
 
@@ -48,8 +90,11 @@ app.UseStaticFiles();
 app.UseSerilogRequestLogging();
 app.UseRouting();
 // app.UseCors();
-// app.UseAuthentication();
-// app.UseAuthorization();
+app.UseAuthentication(); // Reads identity cookie.
+app.UseAuthorization(); // validates access permissions for the current authenticated user.
 // Custom middleware 
 app.MapControllers();
+
+await Database.IdentityRoleSeeder.SeedAsync(app.Services);
+
 app.Run();
