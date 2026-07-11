@@ -9,13 +9,11 @@ public class AuthServices : IAuthServices
 {
   private readonly UserManager<User> _userManager;
   private readonly SignInManager<User> _signInManager;
-  private readonly RoleManager<user_role> _roleManager;
   private readonly ILogger<AuthServices> _logger;
 
-  public AuthServices(UserManager<User> userManager, RoleManager<user_role> roleManager, ILogger<AuthServices> logger, SignInManager<User> signInManager)
+  public AuthServices(UserManager<User> userManager, ILogger<AuthServices> logger, SignInManager<User> signInManager)
   {
     _userManager = userManager;
-    _roleManager = roleManager;
     _logger = logger;
     _signInManager = signInManager;
   }
@@ -62,11 +60,6 @@ public class AuthServices : IAuthServices
     }
 
     var roleName = user_type_option.member.ToString();
-    var roleResult = await EnsureRoleExistsAsync(roleName);
-    if (!roleResult.Succeeded)
-    {
-      return new AuthRegisterResult(roleResult, null);
-    }
 
     // Assign the requested role, defaulting to member.
     var addToRoleResult = await _userManager.AddToRoleAsync(user, roleName);
@@ -94,22 +87,6 @@ public class AuthServices : IAuthServices
   public Task<bool> Logout()
   {
     throw new NotImplementedException();
-  }
-
-  private async Task<IdentityResult> EnsureRoleExistsAsync(string roleName)
-  {
-    if (await _roleManager.RoleExistsAsync(roleName))
-    {
-      return IdentityResult.Success;
-    }
-    // Create the role
-    var createRoleResult = await _roleManager.CreateAsync(new user_role { Name = roleName });
-    if (!createRoleResult.Succeeded)
-    {
-      return IdentityResult.Failed(createRoleResult.Errors.ToArray());
-    }
-
-    return IdentityResult.Success;
   }
 
 }

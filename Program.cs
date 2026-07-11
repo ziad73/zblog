@@ -95,6 +95,6 @@ app.UseAuthorization(); // validates access permissions for the current authenti
 // Custom middleware 
 app.MapControllers();
 
-// await Database.IdentityRoleSeeder.SeedAsync(app.Services);
+await Database.IdentityRoleSeeder.SeedAsync(app.Services);
 
 app.Run();
