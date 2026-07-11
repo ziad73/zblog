@@ -13,8 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Register services into DI container
 builder.Services.AddControllers();
-// Account service
-builder.Services.AddScoped<IAuthService, AuthService>();
+// Register services into DI container
+// Authservices
+builder.Services.AddScoped<IAuthServices, AuthServices>();
 
 // db as a service
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -62,7 +63,7 @@ builder.Services.AddAuthorization(options =>
 // cookie authentication configuration
 builder.Services.ConfigureApplicationCookie(options =>
 {
-   options.Cookie.Name = "ZBlog Cookie"; // change this to something more unique
+   options.Cookie.Name = "ZBlogCookie"; // change this to something more unique
    // Redirect unauthenticated users
    options.LoginPath = "/Account/Login"; 
    options.AccessDeniedPath = "/Account/AccessDenied";
@@ -93,4 +94,7 @@ app.UseAuthentication(); // Reads identity cookie.
 app.UseAuthorization(); // validates access permissions for the current authenticated user.
 // Custom middleware 
 app.MapControllers();
+
+// await Database.IdentityRoleSeeder.SeedAsync(app.Services);
+
 app.Run();

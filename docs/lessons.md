@@ -1,3 +1,5 @@
 - No need for Repository Pattern
 - Clean Arch stuff
-- Record(Positional Record style, One-Liner Syntax) alt for class DTOs && add data annotations as you want!
+- Record(Positional Record style or standard Record Body (Recommended for API DTOs)) alt for class DTOs && add data annotations as you want!
+  - init: private set, that's all DTOs need
+- decorate your controller with [ApiController], ASP.NET Core automatically registers an invisible action filter called ModelStateInvalidFilter, No need to check ModelState.IsValid at every endpoint

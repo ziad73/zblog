@@ -1,6 +1,8 @@
+namespace Entities;
+
 public enum user_type_option
-  {
-    User = 1,
-    Admin = 2,
-    // , Guest = 3
-  }
+{
+  member = 1,
+  admin = 2,
+  author = 3
+}

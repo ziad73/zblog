@@ -36,7 +36,7 @@ A RESTful backend service for a blogging platform — user registration & auth, 
 ## Target Users
 
 - **Readers/Members** — registered users who read, comment, and like content
-- **Authors** — users authorized to create and manage their own blog posts
+- **Authors** — users authorized to create and manage their own blog posts, gets role by applying to become a writer button from dashboard.
 - **Admins/Moderators** — role-based users who can manage any content (moderation, takedowns)
 
 ---
