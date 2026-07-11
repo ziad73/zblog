@@ -2,11 +2,12 @@ using Entities;
 using Microsoft.AspNetCore.Identity;
 using Models.Auth;
 
-namespace Services.Contracts;
+namespace Services.Auth.Contracts;
 
 public interface IAuthServices
 {
   Task<AuthRegisterResult> RegisterAsync(RegisterRequestDto registerRequestDto);
-  // Task<User> Login(LoginDTO loginDTO);
-  Task<bool> Logout();
+  // Login
+  Task<AuthLoginResult> LoginAsync(LoginRequestDto loginRequestDto);
+  Task<AuthLogoutResult> LogoutAsync();
 }

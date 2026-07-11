@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-using Services;
-using Services.Contracts;
+using Services.Auth;
+using Services.Auth.Contracts;
 
 
 var builder = WebApplication.CreateBuilder(args);

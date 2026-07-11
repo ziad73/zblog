@@ -1,9 +1,9 @@
 using Entities;
 using Microsoft.AspNetCore.Identity;
 using Models.Auth;
-using Services.Contracts;
+using Services.Auth.Contracts;
 
-namespace Services;
+namespace Services.Auth;
 
 public class AuthServices : IAuthServices
 {
@@ -40,6 +40,7 @@ public class AuthServices : IAuthServices
         null
       );
     }
+    // Email Confirmation
 
     // map DTO to user
     var user = new User
@@ -84,9 +85,52 @@ public class AuthServices : IAuthServices
     );
   }
 
-  public Task<bool> Logout()
+  public async Task<AuthLoginResult> LoginAsync(LoginRequestDto loginRequestDto)
   {
-    throw new NotImplementedException();
+    // validate credentials
+    var normalizedUsername = loginRequestDto.Username.Trim().ToLowerInvariant();
+    var user = await _userManager.FindByNameAsync(normalizedUsername);
+    if (user == null)
+    {
+      return new AuthLoginResult(
+        IdentityResult.Failed(new IdentityError { Code = "InvalidCredentials", Description = "Invalid credentials." }),
+        null
+      );
+    }
+    // validate password
+    var result = await _userManager.CheckPasswordAsync(user, loginRequestDto.Password);
+    if (!result)
+    {
+      return new AuthLoginResult(
+        IdentityResult.Failed(new IdentityError { Code = "InvalidCredentials", Description = "Invalid credentials." }),
+        null
+      );
+    }
+    // sign in
+    await _signInManager.SignInAsync(user, isPersistent: false);
+
+    // jwt token generation from token service
+
+    // return auth cerdentials
+    return new AuthLoginResult(
+      IdentityResult.Success,
+      new LoginResponseDto(
+        user.Id,
+        "User logged in successfully.",
+        user.UserName!,
+        user.Email!,
+        (await _userManager.GetRolesAsync(user)).ToList()
+      )
+    );
+  }
+  public async Task<AuthLogoutResult> LogoutAsync()
+  {
+    await _signInManager.SignOutAsync();
+
+    return new AuthLogoutResult(
+      IdentityResult.Success,
+      new LogoutResponseDto("User logged out successfully.")
+    );
   }
 
 }

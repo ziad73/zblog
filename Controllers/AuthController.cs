@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Models.Auth;
-using Services.Contracts;
+using Services.Auth.Contracts;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Controllers;
@@ -34,10 +34,40 @@ public class AuthController : Controller
       ));
     }
 
-    return Created(string.Empty, result.Response);
+    return Created(string.Empty, result.Response);// 201 Created
+  }
+  
+  [HttpPost("login")]
+  [AllowAnonymous]
+  public async Task<IActionResult> Login([FromBody]LoginRequestDto loginRequestDto)
+  {
+    // Built-in validation attributes auto-return 400 Bad Request before this if data is invalid.
+    var result = await _authServices.LoginAsync(loginRequestDto);
+
+    if (!result.IdentityResult.Succeeded)
+    {
+      return BadRequest(new ApiErrorResponseDto(
+        "Login failed.",
+        result.IdentityResult.Errors.Select(e => e.Description)
+      ));
+    }
+    return Ok(result.Response);// 200 OK
   }
 
-  // public IActionResult Regis
-  // POST	/api/account/login	Login a user
-  // POST	/api/account/logout	Logout the current user
+  [HttpPost("logout")]
+  [Authorize]
+  public async Task<IActionResult> Logout()
+  {
+    var result = await _authServices.LogoutAsync();
+
+    if (!result.IdentityResult.Succeeded)
+    {
+      return BadRequest(new ApiErrorResponseDto(
+        "Logout failed.",
+        result.IdentityResult.Errors.Select(e => e.Description)
+      ));
+    }
+
+    return Ok(result.Response);
+  }
 }

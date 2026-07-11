@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Models.Auth;
 
-namespace Services.Contracts;
+namespace Services.Auth.Contracts;
 
 public record AuthRegisterResult(
   IdentityResult IdentityResult,
