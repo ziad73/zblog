@@ -1,4 +1,4 @@
-namespace Models.Auth;
+namespace Models.Common;
 
 public record ApiErrorResponseDto(
   string Message,

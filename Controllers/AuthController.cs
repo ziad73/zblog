@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Models.Auth;
+using Models.Common;
 using Services.Auth.Contracts;
 using Microsoft.AspNetCore.Authorization;
 

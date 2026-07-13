@@ -8,6 +8,8 @@ using Microsoft.OpenApi;
 using Serilog;
 using Services.Auth;
 using Services.Auth.Contracts;
+using Services.Blog_post;
+using Services.Blog_post.Contracts;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +19,7 @@ builder.Services.AddControllers();
 // Register services into DI container
 // Authservices
 builder.Services.AddScoped<IAuthServices, AuthServices>();
+builder.Services.AddScoped<IBlogPostServices, BlogPostServices>();
 
 // db as a service
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
