@@ -54,6 +54,24 @@ builder.Services.AddSwaggerGen( options =>
     }
 }); //generates OpenAPI specification (swagger.json) and Swagger UI
 
+// CORS (cross-origin resource sharing) Policy Configuration
+builder.Services.AddCors(options =>
+{
+    /* Custom CORS policy applied:
+        - To specific endpoints using [EnableCors("Frontend")] attribute
+        - Or apply it globally if most endpoints share the same rules by app.UseCors("Frontend");
+        */
+    options.AddPolicy("Frontend", policy =>
+    {
+        // Read allowed domains from appsettings.json file
+        var allowedOrigins = "*";//builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+
+});
+
 
 // Register identity services into DI Container
 builder.Services.AddIdentity<User, user_role>(options => {
@@ -124,8 +142,8 @@ app.UseStaticFiles();
 app.UseSerilogRequestLogging();
 app.UseRouting();
 
-//Before auth middleware?!
-    // then swagger public to open, but not all endpoints are public to run it depends on the [Allow]/[Authorize] attribute
+/*Before auth middleware?!
+    - Swagger UI public to open, but not all endpoints are public to execute, it depends on the [AllowAnonymous]/[Authorize] attribute of endpoint*/
 app.UseSwagger(); // Use Swagger to generate OpenAPI specification (swagger.json) and Swagger UI
 app.UseSwaggerUI( options =>
 {
@@ -134,6 +152,8 @@ app.UseSwaggerUI( options =>
 });
 
 // app.UseCors();
+app.UseCors("Frontend");// Apply CORS policy globally on all endpoints
+
 app.UseAuthentication(); // Reads identity cookie.
 app.UseAuthorization(); // validates access permissions for the current authenticated user.
 
