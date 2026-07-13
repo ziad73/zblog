@@ -7,7 +7,7 @@ namespace Controllers;
 
 [ApiController]
 [Route("api/auth/")]
-public class AuthController : Controller
+public class AuthController : ControllerBase
 {
   private readonly IAuthServices _authServices;
   private readonly ILogger<AuthController> _logger;
@@ -18,6 +18,11 @@ public class AuthController : Controller
     _logger = logger;
   }
 
+  /// <summary>
+  /// Register a new user
+  /// </summary>
+  /// <param name="registerRequestDto"> RegisterRequestDto </param>
+  /// <returns> IActionResult </returns>
   [HttpPost("register")]
   [AllowAnonymous]
   public async Task<IActionResult> Register([FromBody]RegisterRequestDto registerRequestDto)
@@ -37,6 +42,11 @@ public class AuthController : Controller
     return Created(string.Empty, result.Response);// 201 Created
   }
   
+  /// <summary>
+  /// Login a user
+  /// </summary>
+  /// <param name="loginRequestDto"> LoginRequestDto </param>
+  /// <returns> IActionResult </returns>
   [HttpPost("login")]
   [AllowAnonymous]
   public async Task<IActionResult> Login([FromBody]LoginRequestDto loginRequestDto)
@@ -54,6 +64,10 @@ public class AuthController : Controller
     return Ok(result.Response);// 200 OK
   }
 
+  /// <summary>
+  /// Logout a user
+  /// </summary>
+  /// <returns> IActionResult </returns>
   [HttpPost("logout")]
   [Authorize]
   public async Task<IActionResult> Logout()

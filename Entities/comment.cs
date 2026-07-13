@@ -5,7 +5,7 @@ namespace Entities;
 public class Comment
 {
     public Guid id { get; set; } = Guid.NewGuid();
-    public string content { get; set; }
+    public string? content { get; set; }
     public bool is_deleted { get; set; } = false;
     public DateTime? deleted_at { get; set; }
     public DateTime created_at { get; set; } = DateTime.UtcNow;

@@ -1,10 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Controllers;
 
-public class HomeController : Controller
+[ApiController]
+public class HomeController : ControllerBase
 {
-  [HttpGet("/")]
+  [HttpGet("/index")]
+  [AllowAnonymous]
+  // [AllowAnonymous]
   public IActionResult Index()
   {
     return Content("Hello, World!");
