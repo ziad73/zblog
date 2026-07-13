@@ -10,10 +10,10 @@ public class Like
     public Guid user_id { get; set; }
     public User user { get; set; } = null!;
 
-    // Relation with comment
-    public Guid comment_id { get; set; }
-    public Comment comment { get; set; } = null!;
-    // Relation with post
-    public Guid post_id { get; set; }
-    public blog_post post { get; set; } = null!;
+    // Exactly one of these targets must be set.
+    public Guid? comment_id { get; set; }
+    public Comment? comment { get; set; }
+
+    public Guid? post_id { get; set; }
+    public blog_post? post { get; set; }
 }
