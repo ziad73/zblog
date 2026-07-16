@@ -136,14 +136,23 @@ builder.Services.AddAuthentication(options =>
     });
 
 // register the authorization services (like policies and role-checks) into DI container
-builder.Services.AddAuthorization();
-// options =>{
-//    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-//       // Require an authenticated user for all endipoints, unless you explicitly specified [AllowAnonymous].
-//       .RequireAuthenticatedUser() 
-//       .Build();
-// });
+builder.Services.AddAuthorization(options =>
+{
+    // Admin Policy: Strictly requires the "Admin" role.
+    options.AddPolicy("RequireAdmin", policy => 
+        policy.RequireRole("Admin"));
 
+    // Author Policy: Allows both Authors and Admins (since admins have full control).
+    options.AddPolicy("RequireAuthor", policy => 
+        policy.RequireRole("Author", "Admin"));
+
+    // Member Policy: Allows Members, Authors, and Admins to access regular reader content.
+    options.AddPolicy("RequireMember", policy => 
+        policy.RequireRole("Member", "Author", "Admin"));
+
+    // How to use policies:
+    // - [Authorize(Policy = "RequireAdmin")] on controllers or actions
+});
 
 var app = builder.Build();
 
