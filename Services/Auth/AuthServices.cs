@@ -74,12 +74,6 @@ public class AuthServices : IAuthServices
     // Generate JWT token
     var (token, expiresAt) = _tokenService.CreateToken(user, new List<string> { roleName });
 
-    // No need for using SignIn() with web api
-    // No need for cookie-based authentication, e.g. SignInAsync(), PasswordSignInAsync() methods
-    // await _signInManager.SignInAsync(user, isPersistent: false);
-
-
-    // need to be updated, i already has claims from JWT payload 
     return new AuthRegisterResult(
       IdentityResult.Success,
       new RegisterResponseDto(
@@ -87,7 +81,9 @@ public class AuthServices : IAuthServices
         "User registered successfully.",
         user.UserName!,
         user.Email!,
-        roleName
+        new List<string> { roleName },
+        token,
+        expiresAt
       )
     );
   }
@@ -114,12 +110,9 @@ public class AuthServices : IAuthServices
       );
     }
   
-    // No need for cookie-based authentication, e.g. SignInAsync(), PasswordSignInAsync() methods
-    // await _signInManager.SignInAsync(user, isPersistent: false);
+    var roles = (await _userManager.GetRolesAsync(user)).ToList();
+    var (token, expiresAt) = _tokenService.CreateToken(user, roles);
 
-    // jwt token generation from token service
-
-    // need to be updated, i already has claims from JWT payload
     return new AuthLoginResult(
       IdentityResult.Success,
       new LoginResponseDto(
@@ -127,18 +120,20 @@ public class AuthServices : IAuthServices
         "User logged in successfully.",
         user.UserName!,
         user.Email!,
-        (await _userManager.GetRolesAsync(user)).ToList()
+        roles,
+        token,
+        expiresAt
       )
     );
   }
-  public async Task<AuthLogoutResult> LogoutAsync()
+  public Task<AuthLogoutResult> LogoutAsync()
   {
-    await _signInManager.SignOutAsync();
-
-    return new AuthLogoutResult(
+    // The frontend deletes the JWT.
+    // The backend deletes or revokes the Refresh Token from the database.
+    return Task.FromResult(new AuthLogoutResult(
       IdentityResult.Success,
       new LogoutResponseDto("User logged out successfully.")
-    );
+    ));
   }
 
 }

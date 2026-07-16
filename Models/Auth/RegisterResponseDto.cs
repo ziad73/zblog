@@ -5,5 +5,7 @@ public record RegisterResponseDto(
   string Message,
   string Username,
   string Email,
-  string Role
+  List<string> Roles,
+  string Token,
+  DateTime ExpiresAt
 );

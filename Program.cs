@@ -142,7 +142,7 @@ builder.Services.AddAuthorization();
 //       // Require an authenticated user for all endipoints, unless you explicitly specified [AllowAnonymous].
 //       .RequireAuthenticatedUser() 
 //       .Build();
-//});
+// });
 
 
 var app = builder.Build();
