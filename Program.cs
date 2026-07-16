@@ -1,24 +1,37 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using Database;
 using Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using Services.Auth;
 using Services.Auth.Contracts;
 using Services.Blog_post;
 using Services.Blog_post.Contracts;
+using zblog.Models.Auth;
+using zblog.Services.Auth;
+using zblog.Services.Auth.Contracts;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Register services into DI container
 builder.Services.AddControllers();
-// Register services into DI container
+
+// IOptions mapps structured JSON to C# classes.
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() 
+    ?? throw new InvalidOperationException("JWT Settings are missing from configuration.");
+
 // Authservices
 builder.Services.AddScoped<IAuthServices, AuthServices>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IBlogPostServices, BlogPostServices>();
 
 // db as a service
@@ -95,14 +108,41 @@ options.Password.RequiredUniqueChars = 2;
 .AddUserStore<UserStore<User, user_role, ApplicationDbContext, Guid>>()
 .AddRoleStore<RoleStore<user_role, ApplicationDbContext, Guid>>();
 
-// Authorization configuration
-builder.Services.AddAuthorization(options =>
-{
-   options.FallbackPolicy = new AuthorizationPolicyBuilder()
-      // Require an authenticated user for all endipoints, unless you explicitly specified [AllowAnonymous].
-      .RequireAuthenticatedUser() 
-      .Build();
-});
+// JWT Authentication
+builder.Services.AddAuthentication(options =>
+    {
+        // Read & validate JWT tokens from the request header 'Authorization: Bearer <token>'
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        // retruns 401 if not authenticated
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        // Keep the claim names exactly as they appear in the token (no surprise remapping).
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+            ClockSkew = TimeSpan.Zero,
+            NameClaimType = JwtRegisteredClaimNames.Name,
+            RoleClaimType = "role"
+        };
+    });
+
+// register the authorization services (like policies and role-checks) into DI container
+builder.Services.AddAuthorization();
+// options =>{
+//    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+//       // Require an authenticated user for all endipoints, unless you explicitly specified [AllowAnonymous].
+//       .RequireAuthenticatedUser() 
+//       .Build();
+//});
 
 // --------------------------------------------------------------------------------
 
