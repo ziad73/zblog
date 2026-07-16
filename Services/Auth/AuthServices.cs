@@ -2,20 +2,22 @@ using Entities;
 using Microsoft.AspNetCore.Identity;
 using Models.Auth;
 using Services.Auth.Contracts;
+using zblog.Services.Auth.Contracts;
 
 namespace Services.Auth;
 
 public class AuthServices : IAuthServices
 {
+  private readonly ITokenService _tokenService;
   private readonly UserManager<User> _userManager;
-  private readonly SignInManager<User> _signInManager;
   private readonly ILogger<AuthServices> _logger;
 
-  public AuthServices(UserManager<User> userManager, ILogger<AuthServices> logger, SignInManager<User> signInManager)
+  public AuthServices(UserManager<User> userManager, ILogger<AuthServices> logger, ITokenService tokenService)  
   {
     _userManager = userManager;
     _logger = logger;
-    _signInManager = signInManager;
+    _tokenService = tokenService;
+    
   }
   public async Task<AuthRegisterResult> RegisterAsync(RegisterRequestDto registerRequestDto)
   {  
@@ -24,7 +26,7 @@ public class AuthServices : IAuthServices
     // check if the user is already registered
     // by username
     var existingUser = await _userManager.FindByNameAsync(normalizedUsername);
-    if (existingUser != null)
+    if (existingUser is not null)
     {
       return new AuthRegisterResult(
         IdentityResult.Failed(new IdentityError { Code = "DuplicateUserName", Description = "Username is already taken." }),
@@ -33,7 +35,7 @@ public class AuthServices : IAuthServices
     }
     // by email
     existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
-    if (existingUser != null)
+    if (existingUser is not null)
     {
       return new AuthRegisterResult(
         IdentityResult.Failed(new IdentityError { Code = "DuplicateEmail", Description = "Email is already taken." }),
@@ -69,10 +71,15 @@ public class AuthServices : IAuthServices
       return new AuthRegisterResult(addToRoleResult, null);
     }
 
-    // Generate Tokens & Respond
-    // sign in
-    await _signInManager.SignInAsync(user, isPersistent: false);
+    // Generate JWT token
+    var (token, expiresAt) = _tokenService.CreateToken(user, new List<string> { roleName });
 
+    // No need for using SignIn() with web api
+    // No need for cookie-based authentication, e.g. SignInAsync(), PasswordSignInAsync() methods
+    // await _signInManager.SignInAsync(user, isPersistent: false);
+
+
+    // need to be updated, i already has claims from JWT payload 
     return new AuthRegisterResult(
       IdentityResult.Success,
       new RegisterResponseDto(
@@ -106,12 +113,13 @@ public class AuthServices : IAuthServices
         null
       );
     }
-    // sign in
-    await _signInManager.SignInAsync(user, isPersistent: false);
+  
+    // No need for cookie-based authentication, e.g. SignInAsync(), PasswordSignInAsync() methods
+    // await _signInManager.SignInAsync(user, isPersistent: false);
 
     // jwt token generation from token service
 
-    // return auth cerdentials
+    // need to be updated, i already has claims from JWT payload
     return new AuthLoginResult(
       IdentityResult.Success,
       new LoginResponseDto(
