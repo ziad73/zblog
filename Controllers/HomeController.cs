@@ -7,7 +7,7 @@ namespace Controllers;
 public class HomeController : ControllerBase
 {
   [HttpGet("/index")]
-  [AllowAnonymous]
+  [Authorize(Policy = "RequireMember")]
   // [AllowAnonymous]
   public IActionResult Index()
   {

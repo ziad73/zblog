@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
   /// <param name="registerRequestDto"> RegisterRequestDto </param>
   /// <returns> IActionResult </returns>
   [HttpPost("register")]
-  [AllowAnonymous]
+  // [AllowAnonymous] public to use 
   public async Task<IActionResult> Register([FromBody]RegisterRequestDto registerRequestDto)
   {
     // Built-in validation attributes auto-return 400 Bad Request before this if data is invalid.
@@ -49,7 +49,7 @@ public class AuthController : ControllerBase
   /// <param name="loginRequestDto"> LoginRequestDto </param>
   /// <returns> IActionResult </returns>
   [HttpPost("login")]
-  [AllowAnonymous]
+  // [AllowAnonymous] public to use 
   public async Task<IActionResult> Login([FromBody]LoginRequestDto loginRequestDto)
   {
     // Built-in validation attributes auto-return 400 Bad Request before this if data is invalid.
@@ -70,7 +70,7 @@ public class AuthController : ControllerBase
   /// </summary>
   /// <returns> IActionResult </returns>
   [HttpPost("logout")]
-  [Authorize]
+  [Authorize(Policy="RequireMember")]
   public async Task<IActionResult> Logout()
   {
     var result = await _authServices.LogoutAsync();
