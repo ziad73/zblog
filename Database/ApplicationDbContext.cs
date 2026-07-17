@@ -2,6 +2,7 @@ using Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using zblog.Models.Auth;
 
 namespace Database;
 public class ApplicationDbContext : IdentityDbContext<User, user_role, Guid>
@@ -9,9 +10,12 @@ public class ApplicationDbContext : IdentityDbContext<User, user_role, Guid>
   public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
   {
   }
-  public DbSet<blog_post> blog_posts { get; set; }
-  public DbSet<Comment> comments { get; set; }
-  public DbSet<Like> likes { get; set; }
+  /* The modern way to declare your database tables
+    - it eliminates null warnings cleanly without resorting to dummy initialization tricks like = null!;*/
+  public DbSet<RefreshToken> refresh_tokens => Set<RefreshToken>();
+  public DbSet<blog_post> blog_posts => Set<blog_post>();
+  public DbSet<Comment> comments => Set<Comment>();
+  public DbSet<Like> likes => Set<Like>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {

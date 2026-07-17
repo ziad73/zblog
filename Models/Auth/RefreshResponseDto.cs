@@ -1,12 +1,10 @@
 namespace Models.Auth;
 
-public record RegisterResponseDto(
+public record RefreshResponseDto(
   Guid UserId,
-  string Message,
-  string Username,
   string Email,
   List<string> Roles,
-  string Token,
+  string AccessToken,
   DateTime ExpiresAt,
   string RefreshToken,
   DateTime RefreshExpiresAt

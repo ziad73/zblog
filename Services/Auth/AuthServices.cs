@@ -1,21 +1,31 @@
+using Database;
+using Database;
 using Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Models.Auth;
 using Services.Auth.Contracts;
+using zblog.Models.Auth;
+using zblog.Services.Auth.Contracts;
 
 namespace Services.Auth;
 
 public class AuthServices : IAuthServices
 {
+  private readonly ITokenService _tokenService;
   private readonly UserManager<User> _userManager;
-  private readonly SignInManager<User> _signInManager;
   private readonly ILogger<AuthServices> _logger;
+  private readonly IOptions<JwtSettings> _jwtSettings;
+  private readonly ApplicationDbContext _context;
 
-  public AuthServices(UserManager<User> userManager, ILogger<AuthServices> logger, SignInManager<User> signInManager)
+  public AuthServices(UserManager<User> userManager, ILogger<AuthServices> logger, ITokenService tokenService, IOptions<JwtSettings> jwtSettings, ApplicationDbContext context)
   {
     _userManager = userManager;
     _logger = logger;
-    _signInManager = signInManager;
+    _tokenService = tokenService;
+    _jwtSettings = jwtSettings;
+    _context = context;
   }
   public async Task<AuthRegisterResult> RegisterAsync(RegisterRequestDto registerRequestDto)
   {  
@@ -24,7 +34,7 @@ public class AuthServices : IAuthServices
     // check if the user is already registered
     // by username
     var existingUser = await _userManager.FindByNameAsync(normalizedUsername);
-    if (existingUser != null)
+    if (existingUser is not null)
     {
       return new AuthRegisterResult(
         IdentityResult.Failed(new IdentityError { Code = "DuplicateUserName", Description = "Username is already taken." }),
@@ -33,7 +43,7 @@ public class AuthServices : IAuthServices
     }
     // by email
     existingUser = await _userManager.FindByEmailAsync(normalizedEmail);
-    if (existingUser != null)
+    if (existingUser is not null)
     {
       return new AuthRegisterResult(
         IdentityResult.Failed(new IdentityError { Code = "DuplicateEmail", Description = "Email is already taken." }),
@@ -69,9 +79,21 @@ public class AuthServices : IAuthServices
       return new AuthRegisterResult(addToRoleResult, null);
     }
 
-    // Generate Tokens & Respond
-    // sign in
-    await _signInManager.SignInAsync(user, isPersistent: false);
+    // Generate access token
+    var (token, expiresAt) = _tokenService.CreateAccessToken(user, new List<string> { roleName });
+
+    // Generate refresh token and store it
+    var refreshToken = _tokenService.CreateRefreshToken();
+    var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
+
+    _context.refresh_tokens.Add(new RefreshToken
+    {
+        Token = refreshToken,
+        UserId = user.Id,
+        Created = DateTime.UtcNow,
+        Expires = refreshExpiresAt
+    });
+    await _context.SaveChangesAsync();
 
     return new AuthRegisterResult(
       IdentityResult.Success,
@@ -80,7 +102,11 @@ public class AuthServices : IAuthServices
         "User registered successfully.",
         user.UserName!,
         user.Email!,
-        roleName
+        new List<string> { roleName },
+        token,
+        expiresAt,
+        refreshToken,
+        refreshExpiresAt
       )
     );
   }
@@ -106,12 +132,16 @@ public class AuthServices : IAuthServices
         null
       );
     }
-    // sign in
-    await _signInManager.SignInAsync(user, isPersistent: false);
+  
+    var roles = (await _userManager.GetRolesAsync(user)).ToList();
 
-    // jwt token generation from token service
+    // generate JWT token(access)
+    var (accessToken, accessExpiresAt) = _tokenService.CreateAccessToken(user, roles);
 
-    // return auth cerdentials
+    // Issue a refresh token and store it so we can rotate or revoke it later.
+    var refreshToken = _tokenService.CreateRefreshToken();
+    var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
+
     return new AuthLoginResult(
       IdentityResult.Success,
       new LoginResponseDto(
@@ -119,18 +149,149 @@ public class AuthServices : IAuthServices
         "User logged in successfully.",
         user.UserName!,
         user.Email!,
-        (await _userManager.GetRolesAsync(user)).ToList()
+        roles,
+        accessToken,
+        accessExpiresAt,
+        refreshToken,
+        refreshExpiresAt
       )
     );
   }
-  public async Task<AuthLogoutResult> LogoutAsync()
+  public async Task<AuthLogoutResult> LogoutAsync(RevokeRequest request)
   {
-    await _signInManager.SignOutAsync();
+      var token = await _context.refresh_tokens
+          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
 
-    return new AuthLogoutResult(
-      IdentityResult.Success,
-      new LogoutResponseDto("User logged out successfully.")
-    );
+      if (token is null || !token.IsActive)
+      {
+          return new AuthLogoutResult(
+              IdentityResult.Failed(new IdentityError { Code = "InvalidToken", Description = "Refresh token not found or already inactive." }),
+              null
+          );
+      }
+
+      token.Revoked = DateTime.UtcNow;
+      await _context.SaveChangesAsync();
+
+      return new AuthLogoutResult(
+          IdentityResult.Success,
+          new LogoutResponseDto("User logged out successfully.")
+      );
   }
 
+  public async Task<AuthRefreshResult> RefreshAsync(RefreshRequest request)
+  {
+      /* I do four things: refersh token is a single-use token.
+        1. Validate refresh token:
+        2. Detect reused token:
+          - if revoked(used/canceled) token have been reused again(stolen)
+            - then revoke all active tokens.
+        3. Rotate refresh token:
+          - revoke old token and replace it with a new token.
+        4. Issue a new access(jwt) token.
+      */
+      
+      // 1. Validate refresh token
+      var existing = await _context.refresh_tokens
+          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+      if (existing is null)
+      {
+          return new AuthRefreshResult(
+              IdentityResult.Failed(new IdentityError { Code = "InvalidToken", Description = "Refresh token not found." }),
+              null
+          );
+      }
+      if (!existing.IsActive)
+      {
+          // 2. Detect reused token
+          if (existing.Revoked is not null)
+          {
+              await RevokeAllActiveTokensAsync(existing.UserId);
+          }
+          return new AuthRefreshResult(
+              IdentityResult.Failed(new IdentityError { Code = "TokenExpired", Description = "Refresh token is no longer active." }),
+              null
+          );
+      }
+
+      var user = await _userManager.FindByIdAsync(existing.UserId.ToString());
+      if (user is null)
+      {
+          return new AuthRefreshResult(
+              IdentityResult.Failed(new IdentityError { Code = "UserNotFound", Description = "User not found." }),
+              null
+          );
+      }
+
+      var newRefreshToken = _tokenService.CreateRefreshToken();
+      var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
+      
+      // 3. Rotate refresh token
+      existing.Revoked = DateTime.UtcNow;
+      existing.ReplacedByToken = newRefreshToken;
+
+      _context.refresh_tokens.Add(new RefreshToken
+      {
+          Token = newRefreshToken,
+          UserId = user.Id,
+          Created = DateTime.UtcNow,
+          Expires = refreshExpiresAt
+      });
+      await _context.SaveChangesAsync();
+
+      var roles = (await _userManager.GetRolesAsync(user)).ToList();
+
+      // 4. Issue a new access(jwt) token.
+      var (accessToken, accessExpiresAt) = _tokenService.CreateAccessToken(user, roles);
+
+      return new AuthRefreshResult(
+          IdentityResult.Success,
+          new RefreshResponseDto(
+              user.Id,
+              user.Email!,
+              roles,
+              accessToken,
+              accessExpiresAt,
+              newRefreshToken,
+              refreshExpiresAt
+          )
+      );
+  }
+
+  private async Task RevokeAllActiveTokensAsync(Guid userId)
+  {
+      var activeTokens = await _context.refresh_tokens
+          .Where(t => t.UserId == userId && t.Revoked == null && t.Expires > DateTime.UtcNow)
+          .ToListAsync();
+
+      foreach (var token in activeTokens)
+      {
+          token.Revoked = DateTime.UtcNow;
+      }
+
+      await _context.SaveChangesAsync();
+  }
+
+  public async Task<AuthLogoutResult> RevokeAsync(RevokeRequest request)
+  {
+      var token = await _context.refresh_tokens
+          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+      if (token is null || !token.IsActive)
+      {
+          return new AuthLogoutResult(
+              IdentityResult.Failed(new IdentityError { Code = "InvalidToken", Description = "Token not found or already inactive." }),
+              null
+          );
+      }
+
+      token.Revoked = DateTime.UtcNow;
+      await _context.SaveChangesAsync();
+
+      return new AuthLogoutResult(
+          IdentityResult.Success,
+          new LogoutResponseDto("Refresh token revoked.")
+      );
+  }
 }

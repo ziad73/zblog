@@ -1,0 +1,33 @@
+
+using Microsoft.AspNetCore.Mvc;
+using Services.Blog_post.Contracts;
+
+namespace Controllers;
+[ApiController]
+[Route("api/blogpost")]
+public class BlogPostController : ControllerBase
+{
+  private readonly IBlogPostServices _blogPostServices;
+  public BlogPostController(IBlogPostServices blogPostServices)
+  {
+    _blogPostServices = blogPostServices;
+  }
+
+  /// <summary>
+  /// Get all blog posts, excludes soft-deleted
+  /// author + counts only
+  /// </summary>
+  /// <returns></returns>
+  //  GET	/api/blogpost	List all blog posts (excludes soft-deleted)	Public
+  [HttpGet("/")]
+  public IActionResult GetAllBlogPosts()
+  {
+    var Result = _blogPostServices.GetAllBlogPosts();
+    return Ok(Result);
+  }
+  //  GET	/api/blogpost/{id}	Get a single blog post	Public
+  //  POST	/api/blogpost	Create a new blog post	Authorized
+  //  PUT	/api/blogpost/{id}	Update a blog post (owner or Admin)	Authorized
+  //  DELETE	/api/blogpost/{id}	Soft delete a blog post (owner or Admin)	Authorized
+
+}
