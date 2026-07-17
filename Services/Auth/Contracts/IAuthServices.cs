@@ -10,4 +10,6 @@ public interface IAuthServices
   // Login
   Task<AuthLoginResult> LoginAsync(LoginRequestDto loginRequestDto);
   Task<AuthLogoutResult> LogoutAsync();
+  public string CreateRefreshToken();
+
 }

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Entities;
 using Microsoft.AspNetCore.Identity;
 using Models.Auth;
@@ -136,4 +137,11 @@ public class AuthServices : IAuthServices
     ));
   }
 
+  public string CreateRefreshToken()
+  {
+    // A refresh token is just a large cryptographically-random value.
+    // RandomNumberGenerator replaces the obsolete RNGCryptoServiceProvider.
+    var randomBytes = RandomNumberGenerator.GetBytes(64);
+    return Convert.ToBase64String(randomBytes);
+  }
 }
