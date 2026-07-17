@@ -7,5 +7,7 @@ public record RegisterResponseDto(
   string Email,
   List<string> Roles,
   string Token,
-  DateTime ExpiresAt
+  DateTime ExpiresAt,
+  string RefreshToken,
+  DateTime RefreshExpiresAt
 );

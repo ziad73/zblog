@@ -79,8 +79,21 @@ public class AuthServices : IAuthServices
       return new AuthRegisterResult(addToRoleResult, null);
     }
 
-    // Generate JWT token
+    // Generate access token
     var (token, expiresAt) = _tokenService.CreateAccessToken(user, new List<string> { roleName });
+
+    // Generate refresh token and store it
+    var refreshToken = _tokenService.CreateRefreshToken();
+    var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
+
+    _context.refresh_tokens.Add(new RefreshToken
+    {
+        Token = refreshToken,
+        UserId = user.Id,
+        Created = DateTime.UtcNow,
+        Expires = refreshExpiresAt
+    });
+    await _context.SaveChangesAsync();
 
     return new AuthRegisterResult(
       IdentityResult.Success,
@@ -91,7 +104,9 @@ public class AuthServices : IAuthServices
         user.Email!,
         new List<string> { roleName },
         token,
-        expiresAt
+        expiresAt,
+        refreshToken,
+        refreshExpiresAt
       )
     );
   }
