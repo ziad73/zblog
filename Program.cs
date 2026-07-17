@@ -73,7 +73,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
     });
     // Add JWT security requirement to the OpenAPI document
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
@@ -157,15 +157,15 @@ builder.Services.AddAuthorization(options =>
 
     // Admin Policy: Strictly requires the "Admin" role.
     options.AddPolicy("RequireAdmin", policy => 
-        policy.RequireRole("Admin"));
+        policy.RequireRole("admin"));
 
     // Author Policy: Allows both Authors and Admins (since admins have full control).
     options.AddPolicy("RequireAuthor", policy => 
-        policy.RequireRole("Author", "Admin"));
+        policy.RequireRole("author", "admin"));
 
     // Member Policy: Allows Members, Authors, and Admins to access regular reader content.
     options.AddPolicy("RequireMember", policy => 
-        policy.RequireRole("Member", "Author", "Admin"));
+        policy.RequireRole("member", "author", "admin"));
 
 });
 
