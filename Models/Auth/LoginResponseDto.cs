@@ -6,6 +6,8 @@ public record LoginResponseDto(
   string Username,
   string Email,
   List<string> Roles,
-  string Token,
-  DateTime ExpiresAt
+  string accessToken,
+  DateTime ExpiresAt,
+  string refreshToken,
+  DateTime refreshExpiresAt
 );

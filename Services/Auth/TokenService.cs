@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Entities;
 using Microsoft.Extensions.Options;
@@ -47,5 +48,13 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
         var token = handler.CreateToken(descriptor);
 
         return (token, expiresAt);
+    }
+
+    public string CreateRefreshToken()
+    {
+        // A refresh token is just a large cryptographically-random value.
+        // RandomNumberGenerator replaces the obsolete RNGCryptoServiceProvider.
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(randomBytes);
     }
 }

@@ -1,8 +1,10 @@
-using System.Security.Cryptography;
 using Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.CodeAnalysis.Options;
+using Microsoft.Extensions.Options;
 using Models.Auth;
 using Services.Auth.Contracts;
+using zblog.Models.Auth;
 using zblog.Services.Auth.Contracts;
 
 namespace Services.Auth;
@@ -12,13 +14,14 @@ public class AuthServices : IAuthServices
   private readonly ITokenService _tokenService;
   private readonly UserManager<User> _userManager;
   private readonly ILogger<AuthServices> _logger;
+  private readonly IOptions<JwtSettings> _jwtSettings;
 
-  public AuthServices(UserManager<User> userManager, ILogger<AuthServices> logger, ITokenService tokenService)  
+  public AuthServices(UserManager<User> userManager, ILogger<AuthServices> logger, ITokenService tokenService, IOptions<JwtSettings> jwtSettings)
   {
     _userManager = userManager;
     _logger = logger;
     _tokenService = tokenService;
-    
+    _jwtSettings = jwtSettings;
   }
   public async Task<AuthRegisterResult> RegisterAsync(RegisterRequestDto registerRequestDto)
   {  
@@ -112,7 +115,13 @@ public class AuthServices : IAuthServices
     }
   
     var roles = (await _userManager.GetRolesAsync(user)).ToList();
-    var (token, expiresAt) = _tokenService.CreateToken(user, roles);
+
+    // generate JWT token(access)
+    var (accessToken, accessExpiresAt) = _tokenService.CreateToken(user, roles);
+
+    // Issue a refresh token and store it so we can rotate or revoke it later.
+    var refreshToken = _tokenService.CreateRefreshToken();
+    var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
 
     return new AuthLoginResult(
       IdentityResult.Success,
@@ -122,8 +131,10 @@ public class AuthServices : IAuthServices
         user.UserName!,
         user.Email!,
         roles,
-        token,
-        expiresAt
+        accessToken,
+        accessExpiresAt,
+        refreshToken,
+        refreshExpiresAt
       )
     );
   }
@@ -137,11 +148,4 @@ public class AuthServices : IAuthServices
     ));
   }
 
-  public string CreateRefreshToken()
-  {
-    // A refresh token is just a large cryptographically-random value.
-    // RandomNumberGenerator replaces the obsolete RNGCryptoServiceProvider.
-    var randomBytes = RandomNumberGenerator.GetBytes(64);
-    return Convert.ToBase64String(randomBytes);
-  }
 }
