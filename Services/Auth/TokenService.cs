@@ -13,7 +13,7 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
     private readonly JwtSettings _settings = jwtSettings.Value;
 
-    public (string Token, DateTime ExpiresAt) CreateToken(User user, IEnumerable<string> roles)
+    public (string Token, DateTime ExpiresAt) CreateAccessToken(User user, IEnumerable<string> roles)
     {
         var expiresAt = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);// +
 

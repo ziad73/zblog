@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Models.Auth;
 using Models.Common;
 using Services.Auth.Contracts;
-using Microsoft.AspNetCore.Authorization;
 
 namespace Controllers;
 
@@ -84,5 +84,21 @@ public class AuthController : ControllerBase
     }
 
     return Ok(result.Response);
+  }
+
+  [HttpPost("refresh")]
+  public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+  {
+      var result = await _authServices.RefreshAsync(request);
+
+      if (!result.IdentityResult.Succeeded)
+      {
+          return Unauthorized(new ApiErrorResponseDto(
+              "Token refresh failed.",
+              result.IdentityResult.Errors.Select(e => e.Description)
+          ));
+      }
+
+      return Ok(result.Response);
   }
 }

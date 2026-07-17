@@ -6,7 +6,7 @@ public class RefreshToken
     public Guid UserId { get; set; } = Guid.Empty;
     public DateTime Created { get; set; }
     public DateTime Expires { get; set; }
-    public DateTime? Revoked { get; set; }
+    public DateTime? Revoked { get; set; }// used/caneceled
 
     // When this token is rotated, we record the token that replaced it.
     public string? ReplacedByToken { get; set; }
