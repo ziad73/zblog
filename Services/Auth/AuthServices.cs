@@ -142,14 +142,26 @@ public class AuthServices : IAuthServices
       )
     );
   }
-  public Task<AuthLogoutResult> LogoutAsync()
+  public async Task<AuthLogoutResult> LogoutAsync(RevokeRequest request)
   {
-    // The frontend deletes the JWT.
-    // The backend deletes or revokes the Refresh Token from the database.
-    return Task.FromResult(new AuthLogoutResult(
-      IdentityResult.Success,
-      new LogoutResponseDto("User logged out successfully.")
-    ));
+      var token = await _context.refresh_tokens
+          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+      if (token is null || !token.IsActive)
+      {
+          return new AuthLogoutResult(
+              IdentityResult.Failed(new IdentityError { Code = "InvalidToken", Description = "Refresh token not found or already inactive." }),
+              null
+          );
+      }
+
+      token.Revoked = DateTime.UtcNow;
+      await _context.SaveChangesAsync();
+
+      return new AuthLogoutResult(
+          IdentityResult.Success,
+          new LogoutResponseDto("User logged out successfully.")
+      );
   }
 
   public async Task<AuthRefreshResult> RefreshAsync(RefreshRequest request)
@@ -214,7 +226,7 @@ public class AuthServices : IAuthServices
       await _context.SaveChangesAsync();
 
       var roles = (await _userManager.GetRolesAsync(user)).ToList();
-      
+
       // 4. Issue a new access(jwt) token.
       var (accessToken, accessExpiresAt) = _tokenService.CreateAccessToken(user, roles);
 
@@ -244,5 +256,27 @@ public class AuthServices : IAuthServices
       }
 
       await _context.SaveChangesAsync();
+  }
+
+  public async Task<AuthLogoutResult> RevokeAsync(RevokeRequest request)
+  {
+      var token = await _context.refresh_tokens
+          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+      if (token is null || !token.IsActive)
+      {
+          return new AuthLogoutResult(
+              IdentityResult.Failed(new IdentityError { Code = "InvalidToken", Description = "Token not found or already inactive." }),
+              null
+          );
+      }
+
+      token.Revoked = DateTime.UtcNow;
+      await _context.SaveChangesAsync();
+
+      return new AuthLogoutResult(
+          IdentityResult.Success,
+          new LogoutResponseDto("Refresh token revoked.")
+      );
   }
 }

@@ -71,9 +71,9 @@ public class AuthController : ControllerBase
   /// <returns> IActionResult </returns>
   [HttpPost("logout")]
   [Authorize(Policy="RequireMember")]
-  public async Task<IActionResult> Logout()
+  public async Task<IActionResult> Logout([FromBody] RevokeRequest request)
   {
-    var result = await _authServices.LogoutAsync();
+    var result = await _authServices.LogoutAsync(request);
 
     if (!result.IdentityResult.Succeeded)
     {
@@ -89,6 +89,9 @@ public class AuthController : ControllerBase
   [HttpPost("refresh")]
   public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
   {
+    /* called by the client (frontend/mobile app) when the access token (JWT) expires. 
+      - The client sends the refresh token to get a new access token without requiring the user to log in again.
+      - This happens transparently in the background.*/
       var result = await _authServices.RefreshAsync(request);
 
       if (!result.IdentityResult.Succeeded)
