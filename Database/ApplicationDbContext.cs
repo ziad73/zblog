@@ -2,7 +2,7 @@ using Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using zblog.Models.Auth;
+using Models.Auth;
 
 namespace Database;
 public class ApplicationDbContext : IdentityDbContext<User, user_role, Guid>

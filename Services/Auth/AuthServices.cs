@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Models.Auth;
 using Services.Auth.Contracts;
-using zblog.Models.Auth;
-using zblog.Services.Auth.Contracts;
+
 
 namespace Services.Auth;
 
@@ -188,16 +187,18 @@ public class AuthServices : IAuthServices
       );
   }
 
+  // JWT token expired? use refresh token to generate new one without manual logging in
   public async Task<AuthRefreshResult> RefreshAsync(RefreshRequest request)
   {
-      /* I do four things: refersh token is a single-use token.
-        1. Validate refresh token:
-        2. Detect reused token:
-          - if revoked(used/canceled) token have been reused again(stolen)
-            - then revoke all active tokens.
-        3. Rotate refresh token:
-          - revoke old token and replace it with a new token.
-        4. Issue a new access(jwt) token.
+      /* I do four things(checks) to refresh token before creating a new jwt token:
+        1. Validate given refresh token:
+          - is exist in db?
+        2. Detect reuse of revoked token:
+          - is resued after logging out(revoked/canceled)? somebody stole it?
+            - then revoke all active tokens for that user, user need to log in again
+        3. Rotate(عملية تتدوير) refresh token: 
+          - revoke old token and replace it with a new refresh token.
+        4. Issue(create) a new access(jwt) token.
       */
       
       // 1. Validate refresh token
