@@ -1,5 +1,4 @@
 using Database;
-using Database;
 using Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -82,13 +81,13 @@ public class AuthServices : IAuthServices
     // Generate access token
     var (token, expiresAt) = _tokenService.CreateAccessToken(user, new List<string> { roleName });
 
-    // Generate refresh token and store it
+    // Generate refresh token and store its hash
     var refreshToken = _tokenService.CreateRefreshToken();
     var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
 
     _context.refresh_tokens.Add(new RefreshToken
     {
-        Token = refreshToken,
+        Token = TokenService.HashToken(refreshToken),
         UserId = user.Id,
         Created = DateTime.UtcNow,
         Expires = refreshExpiresAt
@@ -138,9 +137,18 @@ public class AuthServices : IAuthServices
     // generate JWT token(access)
     var (accessToken, accessExpiresAt) = _tokenService.CreateAccessToken(user, roles);
 
-    // Issue a refresh token and store it so we can rotate or revoke it later.
+    // Issue a refresh token and store its hash so we can rotate or revoke it later.
     var refreshToken = _tokenService.CreateRefreshToken();
     var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
+
+    _context.refresh_tokens.Add(new RefreshToken
+    {
+        Token = TokenService.HashToken(refreshToken),
+        UserId = user.Id,
+        Created = DateTime.UtcNow,
+        Expires = refreshExpiresAt
+    });
+    await _context.SaveChangesAsync();
 
     return new AuthLoginResult(
       IdentityResult.Success,
@@ -159,8 +167,9 @@ public class AuthServices : IAuthServices
   }
   public async Task<AuthLogoutResult> LogoutAsync(RevokeRequest request)
   {
+      var tokenHash = TokenService.HashToken(request.RefreshToken);
       var token = await _context.refresh_tokens
-          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+          .FirstOrDefaultAsync(t => t.Token == tokenHash);
 
       if (token is null || !token.IsActive)
       {
@@ -192,8 +201,9 @@ public class AuthServices : IAuthServices
       */
       
       // 1. Validate refresh token
+      var tokenHash = TokenService.HashToken(request.RefreshToken);
       var existing = await _context.refresh_tokens
-          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+          .FirstOrDefaultAsync(t => t.Token == tokenHash);
 
       if (existing is null)
       {
@@ -229,11 +239,11 @@ public class AuthServices : IAuthServices
       
       // 3. Rotate refresh token
       existing.Revoked = DateTime.UtcNow;
-      existing.ReplacedByToken = newRefreshToken;
+      existing.ReplacedByToken = TokenService.HashToken(newRefreshToken);
 
       _context.refresh_tokens.Add(new RefreshToken
       {
-          Token = newRefreshToken,
+          Token = TokenService.HashToken(newRefreshToken),
           UserId = user.Id,
           Created = DateTime.UtcNow,
           Expires = refreshExpiresAt
@@ -275,8 +285,9 @@ public class AuthServices : IAuthServices
 
   public async Task<AuthLogoutResult> RevokeAsync(RevokeRequest request)
   {
+      var tokenHash = TokenService.HashToken(request.RefreshToken);
       var token = await _context.refresh_tokens
-          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+          .FirstOrDefaultAsync(t => t.Token == tokenHash);
 
       if (token is null || !token.IsActive)
       {
