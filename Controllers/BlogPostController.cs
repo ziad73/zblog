@@ -1,4 +1,5 @@
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Blog_post.Contracts;
 
@@ -20,6 +21,7 @@ public class BlogPostController : ControllerBase
   /// <returns></returns>
   //  GET	/api/blogpost	List all blog posts (excludes soft-deleted)	Public
   [HttpGet]
+  [Authorize(Policy="RequireMember")]
   public async Task<IActionResult> GetAllBlogPosts()
   {
     var Result = await _blogPostServices.GetAllBlogPosts();
