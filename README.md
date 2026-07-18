@@ -6,7 +6,7 @@ A RESTful backend service for a blogging platform — user registration & auth, 
 
 ## Features
 
-- **Authentication & Authorization** — ASP.NET Core Identity with role-based access control (`Member`, `Author`, `Admin`)
+- **Authentication & Authorization** — JWT access tokens with refresh token rotation & SHA-256 hashing, ASP.NET Core Identity with role-based access control (`Member`, `Author`, `Admin`)
 - **Blog Posts** — full CRUD with soft delete and ownership checks
 - **Nested Comments** — arbitrary-depth threaded replies on posts and other comments
 - **Likes** — like/unlike posts or comments, with strict duplicate-like prevention
@@ -81,14 +81,19 @@ https://localhost:<port>/swagger
 ### Auth
 
 | Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| POST | `/api/auth/register` | Register a new user | Public |
-| POST | `/api/auth/login` | Authenticate a user, issue session/token | Public |
-| POST | `/api/auth/logout` | Terminate the current session | Authenticated |
+|---|---|---|---|---|
+| POST | `/api/auth/register` | Register a new user (returns access + refresh tokens) | Public |
+| POST | `/api/auth/login` | Authenticate a user, issue access + refresh tokens | Public |
+| POST | `/api/auth/refresh` | Exchange a refresh token for a new access token (rotation) | Public |
+| POST | `/api/auth/logout` | Revoke the given refresh token (session-based logout) | Authenticated |
+| POST | `/api/auth/revoke` | Revoke a specific refresh token directly | Authenticated |
 
 - Passwords are hashed, never stored in plaintext.
 - Email and username must be unique.
 - Roles (`Member`, `Author`, `Admin`) are assigned at registration or via admin promotion.
+- `POST /api/auth/register` returns an access token + refresh token immediately — no second login needed.
+- Refresh tokens are **single-use**: each refresh rotates the token (old one revoked, new one issued).
+- Refresh tokens are **SHA-256 hashed** before storage — the raw token is never persisted.
 
 ### Blog Posts
 
