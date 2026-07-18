@@ -19,10 +19,10 @@ public class BlogPostController : ControllerBase
   /// </summary>
   /// <returns></returns>
   //  GET	/api/blogpost	List all blog posts (excludes soft-deleted)	Public
-  [HttpGet("/")]
-  public IActionResult GetAllBlogPosts()
+  [HttpGet]
+  public async Task<IActionResult> GetAllBlogPosts()
   {
-    var Result = _blogPostServices.GetAllBlogPosts();
+    var Result = await _blogPostServices.GetAllBlogPosts();
     return Ok(Result);
   }
   //  GET	/api/blogpost/{id}	Get a single blog post	Public

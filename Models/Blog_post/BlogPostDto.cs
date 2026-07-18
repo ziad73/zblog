@@ -36,7 +36,7 @@ public record BlogPostDetailResponseDto(
   Guid AuthorId,
   string AuthorName,
   string AuthorEmail,
-  string AuthorRole,
+  List<string> AuthorRole,
   int CommentsCount,
   int LikesCount,
   List<CommentResponseDto> Comments
