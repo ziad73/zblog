@@ -1,13 +1,11 @@
 using Database;
-using Database;
 using Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Models.Auth;
 using Services.Auth.Contracts;
-using zblog.Models.Auth;
-using zblog.Services.Auth.Contracts;
+
 
 namespace Services.Auth;
 
@@ -82,13 +80,13 @@ public class AuthServices : IAuthServices
     // Generate access token
     var (token, expiresAt) = _tokenService.CreateAccessToken(user, new List<string> { roleName });
 
-    // Generate refresh token and store it
+    // Generate refresh token and store its hash
     var refreshToken = _tokenService.CreateRefreshToken();
     var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
 
     _context.refresh_tokens.Add(new RefreshToken
     {
-        Token = refreshToken,
+        Token = TokenService.HashToken(refreshToken),
         UserId = user.Id,
         Created = DateTime.UtcNow,
         Expires = refreshExpiresAt
@@ -138,9 +136,18 @@ public class AuthServices : IAuthServices
     // generate JWT token(access)
     var (accessToken, accessExpiresAt) = _tokenService.CreateAccessToken(user, roles);
 
-    // Issue a refresh token and store it so we can rotate or revoke it later.
+    // Issue a refresh token and store its hash so we can rotate or revoke it later.
     var refreshToken = _tokenService.CreateRefreshToken();
     var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.Value.RefreshTokenDays);
+
+    _context.refresh_tokens.Add(new RefreshToken
+    {
+        Token = TokenService.HashToken(refreshToken),
+        UserId = user.Id,
+        Created = DateTime.UtcNow,
+        Expires = refreshExpiresAt
+    });
+    await _context.SaveChangesAsync();
 
     return new AuthLoginResult(
       IdentityResult.Success,
@@ -159,8 +166,9 @@ public class AuthServices : IAuthServices
   }
   public async Task<AuthLogoutResult> LogoutAsync(RevokeRequest request)
   {
+      var tokenHash = TokenService.HashToken(request.RefreshToken);
       var token = await _context.refresh_tokens
-          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+          .FirstOrDefaultAsync(t => t.Token == tokenHash);
 
       if (token is null || !token.IsActive)
       {
@@ -179,21 +187,24 @@ public class AuthServices : IAuthServices
       );
   }
 
+  // JWT token expired? use refresh token to generate new one without manual logging in
   public async Task<AuthRefreshResult> RefreshAsync(RefreshRequest request)
   {
-      /* I do four things: refersh token is a single-use token.
-        1. Validate refresh token:
-        2. Detect reused token:
-          - if revoked(used/canceled) token have been reused again(stolen)
-            - then revoke all active tokens.
-        3. Rotate refresh token:
-          - revoke old token and replace it with a new token.
-        4. Issue a new access(jwt) token.
+      /* I do four things(checks) to refresh token before creating a new jwt token:
+        1. Validate given refresh token:
+          - is exist in db?
+        2. Detect reuse of revoked token:
+          - is resued after logging out(revoked/canceled)? somebody stole it?
+            - then revoke all active tokens for that user, user need to log in again
+        3. Rotate(عملية تتدوير) refresh token: 
+          - revoke old token and replace it with a new refresh token.
+        4. Issue(create) a new access(jwt) token.
       */
       
       // 1. Validate refresh token
+      var tokenHash = TokenService.HashToken(request.RefreshToken);
       var existing = await _context.refresh_tokens
-          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+          .FirstOrDefaultAsync(t => t.Token == tokenHash);
 
       if (existing is null)
       {
@@ -229,11 +240,11 @@ public class AuthServices : IAuthServices
       
       // 3. Rotate refresh token
       existing.Revoked = DateTime.UtcNow;
-      existing.ReplacedByToken = newRefreshToken;
+      existing.ReplacedByToken = TokenService.HashToken(newRefreshToken);
 
       _context.refresh_tokens.Add(new RefreshToken
       {
-          Token = newRefreshToken,
+          Token = TokenService.HashToken(newRefreshToken),
           UserId = user.Id,
           Created = DateTime.UtcNow,
           Expires = refreshExpiresAt
@@ -275,8 +286,9 @@ public class AuthServices : IAuthServices
 
   public async Task<AuthLogoutResult> RevokeAsync(RevokeRequest request)
   {
+      var tokenHash = TokenService.HashToken(request.RefreshToken);
       var token = await _context.refresh_tokens
-          .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+          .FirstOrDefaultAsync(t => t.Token == tokenHash);
 
       if (token is null || !token.IsActive)
       {

@@ -14,9 +14,7 @@ using Services.Auth;
 using Services.Auth.Contracts;
 using Services.Blog_post;
 using Services.Blog_post.Contracts;
-using zblog.Models.Auth;
-using zblog.Services.Auth;
-using zblog.Services.Auth.Contracts;
+using Models.Auth;
 
 
 var builder = WebApplication.CreateBuilder(args);

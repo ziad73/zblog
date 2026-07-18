@@ -1,4 +1,4 @@
-namespace zblog.Models.Auth;
+namespace Models.Auth;
 public class RefreshToken
 {
     public Guid Id { get; set; }

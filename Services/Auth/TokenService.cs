@@ -5,10 +5,10 @@ using Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using zblog.Models.Auth;
-using zblog.Services.Auth.Contracts;
+using Models.Auth;
+using Services.Auth.Contracts;
 
-namespace zblog.Services.Auth;
+namespace Services.Auth;
 public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
     private readonly JwtSettings _settings = jwtSettings.Value;
@@ -56,5 +56,11 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
         // RandomNumberGenerator replaces the obsolete RNGCryptoServiceProvider.
         var randomBytes = RandomNumberGenerator.GetBytes(64);
         return Convert.ToBase64String(randomBytes);
+    }
+
+    public static string HashToken(string token)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToBase64String(bytes);
     }
 }
