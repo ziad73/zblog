@@ -21,7 +21,8 @@ public class AuthController : ControllerBase
 
   /// <summary>Registers a new user account and returns a JWT access token with a refresh token.</summary>
   /// <param name="registerRequestDto">Registration payload containing Name, Username, Email, Password, and ConfirmPassword.</param>
-  /// <returns>201 Created with user details and tokens on success, 400 Bad Request on validation failure.</returns>
+  /// <response code="201">User created. Returns user details, access token, and refresh token.</response>
+  /// <response code="400">Validation failed or username/email already taken.</response>
   [HttpPost("register")]
   public async Task<IActionResult> Register([FromBody]RegisterRequestDto registerRequestDto)
   {
@@ -42,7 +43,8 @@ public class AuthController : ControllerBase
   
   /// <summary>Authenticates a user with username and password, returning a JWT access token and a refresh token.</summary>
   /// <param name="loginRequestDto">Login payload containing Username and Password.</param>
-  /// <returns>200 OK with tokens and user details on success, 400 Bad Request on invalid credentials.</returns>
+  /// <response code="200">Login successful. Returns user details, access token, and refresh token.</response>
+  /// <response code="400">Invalid username or password.</response>
   [HttpPost("login")]
   public async Task<IActionResult> Login([FromBody]LoginRequestDto loginRequestDto)
   {
@@ -61,7 +63,9 @@ public class AuthController : ControllerBase
 
   /// <summary>Revokes the given refresh token, effectively logging the user out of that session.</summary>
   /// <param name="request">Payload containing the RefreshToken to revoke.</param>
-  /// <returns>200 OK on success, 400 Bad Request if token is invalid or already inactive.</returns>
+  /// <response code="200">Logout successful. Refresh token revoked.</response>
+  /// <response code="400">Refresh token not found or already inactive.</response>
+  /// <response code="401">Unauthenticated request.</response>
   [HttpPost("logout")]
   [Authorize(Policy="RequireMember")]
   public async Task<IActionResult> Logout([FromBody] RevokeRequest request)
@@ -81,7 +85,8 @@ public class AuthController : ControllerBase
 
   /// <summary>Exchanges a valid refresh token for a new JWT access token and rotates the refresh token (single-use).</summary>
   /// <param name="request">Payload containing the current RefreshToken.</param>
-  /// <returns>200 OK with a new access token and rotated refresh token, 401 Unauthorized if token is invalid or reused.</returns>
+  /// <response code="200">Token refreshed. Returns new access token and rotated refresh token.</response>
+  /// <response code="401">Refresh token invalid, expired, or detected as reused (revokes all tokens for that user).</response>
   [HttpPost("refresh")]
   public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
   {
