@@ -34,9 +34,9 @@ public record BlogPostDetailResponseDto(
   DateTime CreatedAt,
   DateTime UpdatedAt,
   Guid AuthorId,
-  string AuthorName,
+  string AuthorUsername,
   string AuthorEmail,
-  string AuthorRole,
+  List<string> AuthorRole,
   int CommentsCount,
   int LikesCount,
   List<CommentResponseDto> Comments

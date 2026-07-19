@@ -6,7 +6,7 @@ A RESTful backend service for a blogging platform — user registration & auth, 
 
 ## Features
 
-- **Authentication & Authorization** — ASP.NET Core Identity with role-based access control (`Member`, `Author`, `Admin`)
+- **Authentication & Authorization** — JWT access tokens with refresh token rotation & SHA-256 hashing, ASP.NET Core Identity with role-based access control (`Member`, `Author`, `Admin`)
 - **Blog Posts** — full CRUD with soft delete and ownership checks
 - **Nested Comments** — arbitrary-depth threaded replies on posts and other comments
 - **Likes** — like/unlike posts or comments, with strict duplicate-like prevention
@@ -81,28 +81,65 @@ https://localhost:<port>/swagger
 ### Auth
 
 | Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| POST | `/api/auth/register` | Register a new user | Public |
-| POST | `/api/auth/login` | Authenticate a user, issue session/token | Public |
-| POST | `/api/auth/logout` | Terminate the current session | Authenticated |
+|---|---|---|---|---|
+| POST | `/api/auth/register` | Register a new user (returns access + refresh tokens) | Public |
+| POST | `/api/auth/login` | Authenticate a user, issue access + refresh tokens | Public |
+| POST | `/api/auth/refresh` | Exchange a refresh token for a new access token (rotation) | Public |
+| POST | `/api/auth/logout` | Revoke the given refresh token (session-based logout) | Authenticated |
+| POST | `/api/auth/revoke` | Revoke a specific refresh token directly | Authenticated |
 
 - Passwords are hashed, never stored in plaintext.
 - Email and username must be unique.
 - Roles (`Member`, `Author`, `Admin`) are assigned at registration or via admin promotion.
+- `POST /api/auth/register` returns an access token + refresh token immediately — no second login needed.
+- Refresh tokens are **single-use**: each refresh rotates the token (old one revoked, new one issued).
+- Refresh tokens are **SHA-256 hashed** before storage — the raw token is never persisted.
 
 ### Blog Posts
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| GET | `/api/blogpost` | List all blog posts (excludes soft-deleted) | Public |
-| GET | `/api/blogpost/{id}` | Get a single blog post | Public |
-| POST | `/api/blogpost` | Create a new blog post | Authorized |
-| PUT | `/api/blogpost/{id}` | Update a blog post (owner or Admin) | Authorized |
-| DELETE | `/api/blogpost/{id}` | Soft delete a blog post (owner or Admin) | Authorized |
+| Method | Endpoint | Description | Auth | Responses |
+|---|---|---|---|---|
+| GET | `/api/blogpost` | List all blog posts (excludes soft-deleted) | Member+ | `200` list, `401`, `403` |
+| GET | `/api/blogpost/{id}` | Get a single blog post with nested comments | Public | `200` detail, `404` |
+| POST | `/api/blogpost` | Create a new blog post | Author+ | `201` detail, `401`, `403` |
+| PUT | `/api/blogpost/{id}` | Update a blog post (owner or admin only) | Author+ | `200` detail, `401`, `403`, `404` |
+| DELETE | `/api/blogpost/{id}` | Soft-delete a blog post (owner or admin only) | Author+ | `204`, `401`, `403`, `404` |
 
-- Only the post's author or an `Admin` may update/delete it.
-- Soft-deleted posts are excluded from all public queries.
+**Authorization flow:**
+- `Member+` = any authenticated user with `member`, `author`, or `admin` role
+- `Author+` = any authenticated user with `author` or `admin` role
+- Ownership is enforced in the service layer: the requesting user must match `post.author_id` or have the `admin` role
+
+**Response DTOs:**
+
+```
+BlogPostListResponseDto  —  GET  /api/blogpost
+{
+  id, title, content, createdAt, updatedAt,
+  authorId, authorUsername, authorEmail, authorRole[],
+  commentsCount, likesCount
+}
+
+BlogPostDetailResponseDto  —  GET  /api/blogpost/{id}
+{
+  id, title, content, isDeleted, createdAt, updatedAt,
+  authorId, authorUsername, authorEmail, authorRole[],
+  commentsCount, likesCount,
+  comments: [ { id, content, authorId, authorUsername, createdAt, replies[] } ]
+}
+
+CreateBlogPostRequestDto  —  POST  /api/blogpost
+{ title, content }
+
+UpdateBlogPostRequestDto  —  PUT  /api/blogpost/{id}
+{ title, content }
+```
+
+- Only the post's author or an admin may update/delete it.
+- Soft-deleted posts are excluded from all queries (`is_deleted = false`).
 - Each post tracks `created_at` and `updated_at`.
+- Comments are returned as a nested tree (arbitrary depth via `parent_comment_id`).
+- Author roles are included in both list and detail responses.
 
 ### Comments
 

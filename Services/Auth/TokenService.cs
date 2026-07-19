@@ -5,15 +5,15 @@ using Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using zblog.Models.Auth;
-using zblog.Services.Auth.Contracts;
+using Models.Auth;
+using Services.Auth.Contracts;
 
-namespace zblog.Services.Auth;
+namespace Services.Auth;
 public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
     private readonly JwtSettings _settings = jwtSettings.Value;
 
-    public (string Token, DateTime ExpiresAt) CreateAccessToken(User user, IEnumerable<string> roles)
+    public (string Token, DateTime ExpiresAt) CreateAccessToken(User user, IEnumerable<string> roles, IEnumerable<Claim>? additionalClaims = null)
     {
         var expiresAt = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);// +
 
@@ -28,6 +28,9 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 
         // One "role" claim per role the user has. {"role": "Admin", "role": "Editor"}
         claims.AddRange(roles.Select(role => new Claim("role", role)));
+
+        if (additionalClaims is not null)
+            claims.AddRange(additionalClaims);// Add custom claims into token
 
         // Key as plain-text into a byte array
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Key));
@@ -56,5 +59,11 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
         // RandomNumberGenerator replaces the obsolete RNGCryptoServiceProvider.
         var randomBytes = RandomNumberGenerator.GetBytes(64);
         return Convert.ToBase64String(randomBytes);
+    }
+
+    public static string HashToken(string token)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToBase64String(bytes);
     }
 }

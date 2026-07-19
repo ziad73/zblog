@@ -14,9 +14,7 @@ using Services.Auth;
 using Services.Auth.Contracts;
 using Services.Blog_post;
 using Services.Blog_post.Contracts;
-using zblog.Models.Auth;
-using zblog.Services.Auth;
-using zblog.Services.Auth.Contracts;
+using Models.Auth;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -155,18 +153,24 @@ builder.Services.AddAuthorization(options =>
 {
     // Any action are public by default, unless you specify [Authorize(Policy="RequireMember")] on controllers or actions
 
-    // Admin Policy: Strictly requires the "Admin" role.
+    // Admin Policy: Strictly requires the admin role.
     options.AddPolicy("RequireAdmin", policy => 
-        policy.RequireRole("admin"));
-
-    // Author Policy: Allows both Authors and Admins (since admins have full control).
+        policy.RequireRole(user_type_option.admin.ToString()));
+        
+    // Author Policy: Allows both authors and admins (since admins have full control).
     options.AddPolicy("RequireAuthor", policy => 
-        policy.RequireRole("author", "admin"));
+        policy.RequireRole(user_type_option.author.ToString(), user_type_option.admin.ToString()));
 
-    // Member Policy: Allows Members, Authors, and Admins to access regular reader content.
+    // Member Policy: Allows members, authors, and admins to access regular reader content.
     options.AddPolicy("RequireMember", policy => 
-        policy.RequireRole("member", "author", "admin"));
+        policy.RequireRole( // OR
+            user_type_option.member.ToString(),
+            user_type_option.author.ToString(),
+            user_type_option.admin.ToString()));
 
+    // Custom claim Policy: Allows users with a specific claim value.
+    // options.AddPolicy("RequireCustomClaim", policy => 
+    //     policy.RequireClaim("custom_claim", "custom_value"));
 });
 
 var app = builder.Build();
