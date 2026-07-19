@@ -67,9 +67,54 @@ public class BlogPostServices : IBlogPostServices
     )).ToList();
   }
 
-  public async Task<BlogPostDetailResponseDto> GetBlogPostById(Guid id)
+  public async Task<BlogPostDetailResponseDto?> GetBlogPostById(Guid id)
   {
-    throw new NotImplementedException();
+    var post = await _context.blog_posts
+      .Include(p => p.author)
+      .Where(p => p.id == id && p.is_deleted == false)
+      .FirstOrDefaultAsync();
+
+    if (post is null)
+      return null;
+
+    var roles = (await _userManager.GetRolesAsync(post.author)).ToList();
+
+    var comments = await _context.comments
+      .Include(c => c.author)
+      .Where(c => c.post_id == id && c.is_deleted == false)
+      .ToListAsync();
+
+    var likesCount = await _context.likes.CountAsync(l => l.post_id == id);
+
+    var commentLookup = comments.ToLookup(c => c.parent_comment_id);
+
+    List<CommentResponseDto> BuildTree(Guid? parentId)
+    {
+      return commentLookup[parentId].Select(c => new CommentResponseDto(
+        c.id,
+        c.content ?? string.Empty,
+        c.author_id,
+        c.author.UserName ?? string.Empty,
+        c.created_at,
+        BuildTree(c.id)
+      )).ToList();
+    }
+
+    return new BlogPostDetailResponseDto(
+      post.id,
+      post.title ?? string.Empty,
+      post.content ?? string.Empty,
+      post.is_deleted,
+      post.created_at,
+      post.updated_at,
+      post.author_id,
+      post.author.UserName ?? string.Empty,
+      post.author.Email ?? string.Empty,
+      roles,
+      comments.Count,
+      likesCount,
+      BuildTree(null)
+    );
   }
 
   public Task SoftDeleteBlogPost(Guid id)

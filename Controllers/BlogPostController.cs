@@ -27,7 +27,14 @@ public class BlogPostController : ControllerBase
     var Result = await _blogPostServices.GetAllBlogPosts();
     return Ok(Result);
   }
-  //  GET	/api/blogpost/{id}	Get a single blog post	Public
+  [HttpGet("{id:guid}")]
+  public async Task<IActionResult> GetBlogPostById(Guid id)
+  {
+    var result = await _blogPostServices.GetBlogPostById(id);
+    if (result is null)
+      return NotFound(new { message = $"Blog post with id '{id}' not found." });
+    return Ok(result);
+  }
   //  POST	/api/blogpost	Create a new blog post	Authorized
   //  PUT	/api/blogpost/{id}	Update a blog post (owner or Admin)	Authorized
   //  DELETE	/api/blogpost/{id}	Soft delete a blog post (owner or Admin)	Authorized
