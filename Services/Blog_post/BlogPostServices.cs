@@ -22,6 +22,7 @@ public class BlogPostServices : IBlogPostServices
 
   public Task<BlogPostDetailResponseDto> CreateBlogPost(CreateBlogPostRequestDto blogPostRequestDto)
   {
+    // extract author id from jwt sub claim
     throw new NotImplementedException();
   }
 
@@ -117,9 +118,13 @@ public class BlogPostServices : IBlogPostServices
     );
   }
 
-  public Task SoftDeleteBlogPost(Guid id)
+  public async Task SoftDeleteBlogPost(Guid id)
   {
-    throw new NotImplementedException();
+    var post = _context.blog_posts.Find(id);
+    post?.is_deleted = true;
+    post?.updated_at = DateTime.UtcNow;
+    await _context.SaveChangesAsync();
+    return;
   }
 
   public Task<BlogPostDetailResponseDto> UpdateBlogPost(UpdateBlogPostRequestDto blogPostRequestDto)

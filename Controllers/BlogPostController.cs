@@ -1,6 +1,7 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Models.Blog_post;
 using Services.Blog_post.Contracts;
 
 namespace Controllers;
@@ -36,7 +37,22 @@ public class BlogPostController : ControllerBase
     return Ok(result);
   }
   //  POST	/api/blogpost	Create a new blog post	Authorized
+  // [HttpPost("create")]
+  // [Authorize(Policy="RequireAuthor")]
+  // public async Task<IActionResult> CreateBlogPost([FromBody] CreateBlogPostRequestDto blogPostRequestDto)
+  // {
+  //   var result = await _blogPostServices.CreateBlogPost(blogPostRequestDto);
+  //   return Created(result);
+  // }
   //  PUT	/api/blogpost/{id}	Update a blog post (owner or Admin)	Authorized
+  
   //  DELETE	/api/blogpost/{id}	Soft delete a blog post (owner or Admin)	Authorized
+  [HttpDelete("{id:guid}")]
+  [Authorize(Policy="RequireAuthor")]
+  public async Task<IActionResult> SoftDeleteBlogPost(Guid id)
+  {
+    await _blogPostServices.SoftDeleteBlogPost(id);
+    return NoContent();
+  }
 
 }
