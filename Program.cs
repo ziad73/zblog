@@ -156,18 +156,21 @@ builder.Services.AddAuthorization(options =>
     // Admin Policy: Strictly requires the admin role.
     options.AddPolicy("RequireAdmin", policy => 
         policy.RequireRole(user_type_option.admin.ToString()));
-
+        
     // Author Policy: Allows both authors and admins (since admins have full control).
     options.AddPolicy("RequireAuthor", policy => 
         policy.RequireRole(user_type_option.author.ToString(), user_type_option.admin.ToString()));
 
     // Member Policy: Allows members, authors, and admins to access regular reader content.
     options.AddPolicy("RequireMember", policy => 
-        policy.RequireRole(
+        policy.RequireRole( // OR
             user_type_option.member.ToString(),
             user_type_option.author.ToString(),
             user_type_option.admin.ToString()));
 
+    // Custom claim Policy: Allows users with a specific claim value.
+    // options.AddPolicy("RequireCustomClaim", policy => 
+    //     policy.RequireClaim("custom_claim", "custom_value"));
 });
 
 var app = builder.Build();

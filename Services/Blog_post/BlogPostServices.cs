@@ -20,10 +20,19 @@ public class BlogPostServices : IBlogPostServices
     _userManager = userManager;
   }
 
-  public Task<BlogPostDetailResponseDto> CreateBlogPost(CreateBlogPostRequestDto blogPostRequestDto)
+  public async Task<BlogPostDetailResponseDto> CreateBlogPost(Guid userId, CreateBlogPostRequestDto dto)
   {
-    // extract author id from jwt sub claim
-    throw new NotImplementedException();
+    var post = new blog_post
+    {
+      title = dto.Title,
+      content = dto.Content,
+      author_id = userId
+    };
+
+    _context.blog_posts.Add(post);
+    await _context.SaveChangesAsync();
+
+    return (await GetBlogPostById(post.id))!;
   }
 
   public async Task<List<BlogPostListResponseDto>> GetAllBlogPosts()
@@ -118,17 +127,50 @@ public class BlogPostServices : IBlogPostServices
     );
   }
 
-  public async Task SoftDeleteBlogPost(Guid id)
+  public async Task<BlogPostDetailResponseDto?> UpdateBlogPost(Guid id, Guid userId, UpdateBlogPostRequestDto dto)
   {
-    var post = _context.blog_posts.Find(id);
-    post?.is_deleted = true;
-    post?.updated_at = DateTime.UtcNow;
+    var post = await _context.blog_posts
+      .Where(p => p.id == id && p.is_deleted == false)
+      .FirstOrDefaultAsync();
+
+    if (post is null)
+      return null;
+
+    if (post.author_id != userId)
+    {
+      var requestingUser = await _userManager.FindByIdAsync(userId.ToString());
+      if (requestingUser is null || !await _userManager.IsInRoleAsync(requestingUser, "admin"))
+        return null;
+    }
+
+    post.title = dto.Title;
+    post.content = dto.Content;
+    post.updated_at = DateTime.UtcNow;
     await _context.SaveChangesAsync();
-    return;
+
+    return await GetBlogPostById(post.id);
   }
 
-  public Task<BlogPostDetailResponseDto> UpdateBlogPost(UpdateBlogPostRequestDto blogPostRequestDto)
+  public async Task<bool> SoftDeleteBlogPost(Guid id, Guid userId)
   {
-    throw new NotImplementedException();
+    var post = await _context.blog_posts
+      .Where(p => p.id == id && p.is_deleted == false)
+      .FirstOrDefaultAsync();
+
+    if (post is null)
+      return false;
+
+    if (post.author_id != userId)
+    {
+      var requestingUser = await _userManager.FindByIdAsync(userId.ToString());
+      if (requestingUser is null || !await _userManager.IsInRoleAsync(requestingUser, "admin"))
+        return false;
+    }
+
+    post.is_deleted = true;
+    post.deleted_at = DateTime.UtcNow;
+    await _context.SaveChangesAsync();
+
+    return true;
   }
 }
