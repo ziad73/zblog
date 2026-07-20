@@ -18,6 +18,8 @@ public class CommentController : ControllerBase
     _commentServices = commentServices;
   }
 
+  /// <summary>List all comments (excludes soft-deleted).</summary>
+  /// <response code="200">List of comments with author info and like counts.</response>
   [HttpGet]
   public async Task<IActionResult> GetAllComments()
   {
@@ -25,8 +27,11 @@ public class CommentController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>Get a single comment by ID with its nested replies.</summary>
+  /// <param name="id">The comment GUID.</param>
+  /// <response code="200">Comment with nested reply tree.</response>
+  /// <response code="404">Comment not found or soft-deleted.</response>
   [HttpGet("{id:guid}")]
-  // GET	/api/comments/{id}	Get a single comment	Public
   public async Task<IActionResult> GetCommentById(Guid id)
   {
     var result = await _commentServices.GetCommentById(id);
@@ -35,9 +40,14 @@ public class CommentController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>Create a comment on a post or as a reply to another comment.</summary>
+  /// <param name="dto">Payload with content, post ID, and optional parent comment ID.</param>
+  /// <response code="201">Comment created. Returns the comment with nested replies.</response>
+  /// <response code="400">Invalid payload or the post/parent comment does not exist.</response>
+  /// <response code="401">Unauthenticated request.</response>
+  /// <response code="403">Authenticated but not a member/author/admin.</response>
   [HttpPost]
   [Authorize(Policy = "RequireMember")]
-  // POST	/api/comments	Create a comment on a post or another comment	Authorized
   public async Task<IActionResult> CreateComment([FromBody] CreateCommentRequestDto dto)
   {
     var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
@@ -45,9 +55,15 @@ public class CommentController : ControllerBase
     return CreatedAtAction(nameof(GetCommentById), new { id = result.Id }, result);
   }
 
+  /// <summary>Update a comment's content (owner or admin only).</summary>
+  /// <param name="id">The comment GUID.</param>
+  /// <param name="dto">Payload with new content.</param>
+  /// <response code="200">Comment updated. Returns the comment with nested replies.</response>
+  /// <response code="401">Unauthenticated request.</response>
+  /// <response code="403">Authenticated but not the owner or admin.</response>
+  /// <response code="404">Comment not found or soft-deleted.</response>
   [HttpPut("{id:guid}")]
   [Authorize(Policy = "RequireMember")]
-  // PUT	/api/comments/{id}	Update a comment (owner or Admin)	Authorized
   public async Task<IActionResult> UpdateComment(Guid id, [FromBody] UpdateCommentRequestDto dto)
   {
     var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
@@ -62,9 +78,14 @@ public class CommentController : ControllerBase
     return Ok(result);
   }
 
+  /// <summary>Soft-delete a comment (owner or admin only).</summary>
+  /// <param name="id">The comment GUID.</param>
+  /// <response code="204">Comment soft-deleted successfully.</response>
+  /// <response code="401">Unauthenticated request.</response>
+  /// <response code="403">Authenticated but not the owner or admin.</response>
+  /// <response code="404">Comment not found or already soft-deleted.</response>
   [HttpDelete("{id:guid}")]
   [Authorize(Policy = "RequireMember")]
-  // DELETE	/api/comments/{id}	Soft delete a comment (owner or Admin)	Authorized
   public async Task<IActionResult> SoftDeleteComment(Guid id)
   {
     var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
