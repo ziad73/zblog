@@ -19,12 +19,13 @@ public class CommentServices : ICommentServices
     _userManager = userManager;
   }
 
-  /// <summary>Retrieves all non-deleted comments as a flat list with author info and like counts.</summary>
+  /// <summary>Retrieves all non-deleted comments for a given post as a flat list with author info and like counts.</summary>
+  /// <param name="postId">The ID of the post to fetch comments for.</param>
   /// <returns>A list of <see cref="CommentListResponseDto"/> sorted by creation date.</returns>
-  public async Task<List<CommentListResponseDto>> GetAllComments()
+  public async Task<List<CommentListResponseDto>> GetAllComments(Guid postId)
   {
     var comments = await _context.comments
-      .Where(c => c.is_deleted == false)
+      .Where(c => c.post_id == postId && c.is_deleted == false)
       .OrderBy(c => c.created_at)
       .Select(c => new CommentListResponseDto(
         c.id,

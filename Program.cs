@@ -201,7 +201,7 @@ else
 }
 // app.UseHsts();
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+// app.UseStaticFiles();
 // logging
 app.UseSerilogRequestLogging();
 app.UseRouting();

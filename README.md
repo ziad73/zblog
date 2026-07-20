@@ -217,7 +217,7 @@ UpdateBlogPostRequestDto  —  PUT  /api/blogpost/{id}
 
 | Method | Endpoint | Description | Auth | Responses |
 |---|---|---|---|---|
-| GET | `/api/comments` | List all comments (excludes soft-deleted) | Public | `200` list |
+| GET | `/api/comments?postId={id}` | List all comments for a post (excludes soft-deleted) | Public | `200` list, `400` |
 | GET | `/api/comments/{id}` | Get a single comment with nested replies | Public | `200` detail, `404` |
 | POST | `/api/comments` | Create a comment on a post or another comment | Member+ | `201` detail, `400`, `401`, `403` |
 | PUT | `/api/comments/{id}` | Update a comment (owner or admin only) | Member+ | `200` detail, `401`, `403`, `404` |

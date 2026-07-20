@@ -18,12 +18,14 @@ public class CommentController : ControllerBase
     _commentServices = commentServices;
   }
 
-  /// <summary>List all comments (excludes soft-deleted).</summary>
+  /// <summary>List all comments for a given post (excludes soft-deleted).</summary>
+  /// <param name="postId">The post GUID to fetch comments for.</param>
   /// <response code="200">List of comments with author info and like counts.</response>
+  /// <response code="400">Missing or invalid postId.</response>
   [HttpGet]
-  public async Task<IActionResult> GetAllComments()
+  public async Task<IActionResult> GetAllComments([FromQuery] Guid postId)
   {
-    var result = await _commentServices.GetAllComments();
+    var result = await _commentServices.GetAllComments(postId);
     return Ok(result);
   }
 
@@ -52,7 +54,7 @@ public class CommentController : ControllerBase
   {
     var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
     var result = await _commentServices.CreateComment(userId, dto);
-    return CreatedAtAction(nameof(GetCommentById), new { id = result.Id }, result);
+    return CreatedAtAction(nameof(GetCommentById), new { id = result?.Id }, result);
   }
 
   /// <summary>Update a comment's content (owner or admin only).</summary>
