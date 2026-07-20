@@ -25,7 +25,7 @@ public record CommentResponseDto(
   Guid Id,
   string Content,
   Guid AuthorId,
-  string AuthorUsername,
+  string AuthorUsername, // include user table
   DateTime CreatedAt,
-  List<CommentResponseDto>? Replies
+  List<CommentResponseDto>? Replies // build tree
 );

@@ -41,10 +41,44 @@ public class CommentServices : ICommentServices
 
   public async Task<CommentResponseDto?> GetCommentById(Guid id)
   {
-    throw new NotImplementedException();
+    var comment = await _context.comments
+      .Include(c => c.author)
+      .Where(c => c.id == id && c.is_deleted == false)
+      .FirstOrDefaultAsync();
+
+    if (comment is null)
+      return null;
+
+    var allPostComments = await _context.comments
+      .Include(c => c.author)
+      .Where(c => c.post_id == comment.post_id && c.is_deleted == false)
+      .ToListAsync();
+
+    var commentLookup = allPostComments.ToLookup(c => c.parent_comment_id);
+
+    List<CommentResponseDto> BuildTree(Guid? parentId)
+    {
+      return commentLookup[parentId].Select(c => new CommentResponseDto(
+        c.id,
+        c.content ?? string.Empty,
+        c.author_id,
+        c.author.UserName ?? string.Empty,
+        c.created_at,
+        BuildTree(c.id)
+      )).ToList();
+    }
+
+    return new CommentResponseDto(
+      comment.id,
+      comment.content ?? string.Empty,
+      comment.author_id,
+      comment.author.UserName ?? string.Empty,
+      comment.created_at,
+      BuildTree(comment.id)
+    );
   }
 
-  public Task<CommentResponseDto> CreateComment(Guid userId, CreateCommentRequestDto dto)
+  public async Task<CommentResponseDto> CreateComment(Guid userId, CreateCommentRequestDto dto)
   {
     throw new NotImplementedException();
   }
