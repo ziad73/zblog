@@ -33,6 +33,78 @@ A RESTful backend service for a blogging platform — user registration & auth, 
 
 ---
 
+## Database Schema
+
+### Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    USERS ||--o{ BLOG_POSTS : authors
+    USERS ||--o{ COMMENTS : authors
+    USERS ||--o{ LIKES : gives
+    USERS }o--o{ ROLES : has
+    USER_ROLES }o--|| USERS : maps
+    USER_ROLES }o--|| ROLES : maps
+    BLOG_POSTS ||--o{ COMMENTS : receives
+    BLOG_POSTS ||--o{ LIKES : receives
+    COMMENTS ||--o{ COMMENTS : replies_to
+    COMMENTS ||--o{ LIKES : receives
+
+    USERS {
+        uuid id PK
+        varchar username UK
+        varchar email UK
+        varchar password_hash
+        varchar normalized_email
+        boolean email_confirmed
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    ROLES {
+        uuid id PK
+        varchar name UK
+    }
+
+    USER_ROLES {
+        uuid user_id PK, FK
+        uuid role_id PK, FK
+    }
+
+    BLOG_POSTS {
+        uuid id PK
+        varchar title
+        text content
+        uuid author_id FK
+        boolean is_deleted
+        timestamptz deleted_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    COMMENTS {
+        uuid id PK
+        text content
+        uuid post_id FK
+        uuid parent_comment_id FK
+        uuid author_id FK
+        boolean is_deleted
+        timestamptz deleted_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    LIKES {
+        uuid id PK
+        uuid user_id FK
+        uuid blog_post_id FK
+        uuid comment_id FK
+        timestamptz created_at
+    }
+```
+
+---
+
 ## Target Users
 
 - **Readers/Members** — registered users who read, comment, and like content
@@ -81,7 +153,7 @@ https://localhost:<port>/swagger
 ### Auth
 
 | Method | Endpoint | Description | Auth |
-|---|---|---|---|---|
+|---|:---|:---|---|
 | POST | `/api/auth/register` | Register a new user (returns access + refresh tokens) | Public |
 | POST | `/api/auth/login` | Authenticate a user, issue access + refresh tokens | Public |
 | POST | `/api/auth/refresh` | Exchange a refresh token for a new access token (rotation) | Public |
@@ -143,17 +215,17 @@ UpdateBlogPostRequestDto  —  PUT  /api/blogpost/{id}
 
 ### Comments
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| GET | `/api/comments` | List all comments (excludes soft-deleted) | Public |
-| GET | `/api/comments/{id}` | Get a single comment | Public |
-| POST | `/api/comments` | Create a comment on a post or another comment | Authorized |
-| PUT | `/api/comments/{id}` | Update a comment (owner or Admin) | Authorized |
-| DELETE | `/api/comments/{id}` | Soft delete a comment (owner or Admin) | Authorized |
+| Method | Endpoint | Description | Auth | Responses |
+|---|---|---|---|---|
+| GET | `/api/comments?postId={id}` | List all comments for a post (excludes soft-deleted) | Public | `200` list, `400` |
+| GET | `/api/comments/{id}` | Get a single comment with nested replies | Public | `200` detail, `404` |
+| POST | `/api/comments` | Create a comment on a post or another comment | Member+ | `201` detail, `400`, `401`, `403` |
+| PUT | `/api/comments/{id}` | Update a comment (owner or admin only) | Member+ | `200` detail, `401`, `403`, `404` |
+| DELETE | `/api/comments/{id}` | Soft-delete a comment (owner or admin only) | Member+ | `204`, `401`, `403`, `404` |
 
 - A comment belongs to exactly one blog post (directly or via its parent chain).
 - A comment may optionally have a `parent_comment_id`, enabling arbitrary-depth nested replies.
-- Soft-deleting a parent comment does not delete its children — children remain visible with a "[deleted]" placeholder for the parent *(pending stakeholder confirmation — see [Open Questions](#open-questions))*.
+- Soft-deleting a parent comment does not delete its children — children remain visible with a "[deleted]" placeholder for the parent.
 
 ### Likes
 

@@ -13,6 +13,11 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
     private readonly JwtSettings _settings = jwtSettings.Value;
 
+    /// <summary>Creates a JWT access token for the given user with role and custom claims.</summary>
+    /// <param name="user">The user to create the token for.</param>
+    /// <param name="roles">The roles to embed as claims (e.g., "admin", "author", "member").</param>
+    /// <param name="additionalClaims">Optional extra claims to include in the token payload.</param>
+    /// <returns>A tuple containing the JWT token string and its expiration time.</returns>
     public (string Token, DateTime ExpiresAt) CreateAccessToken(User user, IEnumerable<string> roles, IEnumerable<Claim>? additionalClaims = null)
     {
         var expiresAt = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);// +
@@ -53,6 +58,8 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
         return (token, expiresAt);
     }
 
+    /// <summary>Generates a cryptographically random refresh token (64 bytes, base64-encoded).</summary>
+    /// <returns>A secure random string suitable for use as a refresh token.</returns>
     public string CreateRefreshToken()
     {
         // A refresh token is just a large cryptographically-random value.
@@ -61,6 +68,9 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
         return Convert.ToBase64String(randomBytes);
     }
 
+    /// <summary>Computes a SHA-256 hash of the given token for secure storage.</summary>
+    /// <param name="token">The raw token string to hash.</param>
+    /// <returns>The base64-encoded SHA-256 hash of the token.</returns>
     public static string HashToken(string token)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));

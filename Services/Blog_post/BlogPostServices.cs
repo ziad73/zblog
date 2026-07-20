@@ -20,6 +20,10 @@ public class BlogPostServices : IBlogPostServices
     _userManager = userManager;
   }
 
+  /// <summary>Creates a new blog post and returns the full detail view.</summary>
+  /// <param name="userId">The ID of the authenticated author creating the post.</param>
+  /// <param name="dto">Payload with title and content.</param>
+  /// <returns>The created blog post with nested comments and counts.</returns>
   public async Task<BlogPostDetailResponseDto> CreateBlogPost(Guid userId, CreateBlogPostRequestDto dto)
   {
     var post = new blog_post
@@ -35,6 +39,8 @@ public class BlogPostServices : IBlogPostServices
     return (await GetBlogPostById(post.id))!;
   }
 
+  /// <summary>Retrieves all non-deleted blog posts with author info, roles, and comment/like counts.</summary>
+  /// <returns>A list of blog posts sorted by creation date.</returns>
   public async Task<List<BlogPostListResponseDto>> GetAllBlogPosts()
   {
     var posts = await _context.blog_posts
@@ -77,6 +83,9 @@ public class BlogPostServices : IBlogPostServices
     )).ToList();
   }
 
+  /// <summary>Gets a single non-deleted blog post with its nested comment tree and like count.</summary>
+  /// <param name="id">The post GUID.</param>
+  /// <returns>The blog post with author info, nested comments, and counts, or null if not found or soft-deleted.</returns>
   public async Task<BlogPostDetailResponseDto?> GetBlogPostById(Guid id)
   {
     var post = await _context.blog_posts
@@ -127,6 +136,11 @@ public class BlogPostServices : IBlogPostServices
     );
   }
 
+  /// <summary>Updates a blog post's title and content. Only the post author or an admin may update.</summary>
+  /// <param name="id">The post GUID.</param>
+  /// <param name="userId">The ID of the requesting user.</param>
+  /// <param name="dto">Payload with new title and content.</param>
+  /// <returns>The updated blog post, or null if not found or not authorized.</returns>
   public async Task<BlogPostDetailResponseDto?> UpdateBlogPost(Guid id, Guid userId, UpdateBlogPostRequestDto dto)
   {
     var post = await _context.blog_posts
@@ -151,6 +165,10 @@ public class BlogPostServices : IBlogPostServices
     return await GetBlogPostById(post.id);
   }
 
+  /// <summary>Soft-deletes a blog post. Only the post author or an admin may delete.</summary>
+  /// <param name="id">The post GUID.</param>
+  /// <param name="userId">The ID of the requesting user.</param>
+  /// <returns>True if deleted, false if not found or not authorized.</returns>
   public async Task<bool> SoftDeleteBlogPost(Guid id, Guid userId)
   {
     var post = await _context.blog_posts

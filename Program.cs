@@ -15,6 +15,8 @@ using Services.Auth.Contracts;
 using Services.Blog_post;
 using Services.Blog_post.Contracts;
 using Models.Auth;
+using Services.Comment;
+using Services.Comment.Contracts;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +33,7 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSetting
 builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IBlogPostServices, BlogPostServices>();
+builder.Services.AddScoped<ICommentServices, CommentServices>();
 
 // db as a service
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -198,7 +201,7 @@ else
 }
 // app.UseHsts();
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+// app.UseStaticFiles();
 // logging
 app.UseSerilogRequestLogging();
 app.UseRouting();
