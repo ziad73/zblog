@@ -159,8 +159,28 @@ public class CommentServices : ICommentServices
   /// <param name="id">The comment GUID.</param>
   /// <param name="userId">The ID of the requesting user.</param>
   /// <returns>True if deleted, false if not found or not authorized.</returns>
-  public Task<bool> SoftDeleteComment(Guid id, Guid userId)
+  public async Task<bool> SoftDeleteComment(Guid id, Guid userId)
   {
-    throw new NotImplementedException();
+    // find comment
+    var comment = await _context.comments
+      .Where(c => c.id == id && c.is_deleted == false)
+      .FirstOrDefaultAsync();
+    if (comment is null)
+      return false;
+
+    // Ownership check: is it owner or admin?
+    if (comment.author_id != userId)
+    {
+      var requestingUser = await _userManager.FindByIdAsync(userId.ToString());
+      //  check IsInRoleAsync("admin") → not owner & not admin → return false
+      if (requestingUser is null || !await _userManager.IsInRoleAsync(requestingUser, "admin"))
+        return false;
+    }
+
+    comment.is_deleted = true;
+    comment.deleted_at = DateTime.UtcNow;
+    await _context.SaveChangesAsync();
+
+    return true;
   }
 }
