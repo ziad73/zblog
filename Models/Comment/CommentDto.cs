@@ -28,7 +28,7 @@ public record CommentResponseDto(
   Guid AuthorId,
   string AuthorUsername,
   DateTime CreatedAt,
-  List<CommentResponseDto>? Replies,
   int LikesCount,
-  int RepliesCount
+  int RepliesCount,
+  List<CommentResponseDto>? Replies
 );

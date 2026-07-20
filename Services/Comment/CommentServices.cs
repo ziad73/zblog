@@ -73,9 +73,9 @@ public class CommentServices : ICommentServices
         c.author_id,
         c.author.UserName ?? string.Empty,
         c.created_at,
-        BuildTree(c.id),
         c.likes.Count,
-        commentLookup[c.id].Count()
+        commentLookup[c.id].Count(),
+        BuildTree(c.id)
       )).ToList();
     }
 
@@ -85,9 +85,9 @@ public class CommentServices : ICommentServices
       comment.author_id,
       comment.author.UserName ?? string.Empty,
       comment.created_at,
-      BuildTree(comment.id),
       comment.likes.Count,
-      commentLookup[comment.id].Count()
+      commentLookup[comment.id].Count(),
+      BuildTree(comment.id)
     );
   }
 

@@ -116,9 +116,9 @@ public class BlogPostServices : IBlogPostServices
         c.author_id,
         c.author.UserName ?? string.Empty,
         c.created_at,
-        BuildTree(c.id),
         c.likes.Count,
-        commentLookup[c.id].Count()
+        commentLookup[c.id].Count(),
+        BuildTree(c.id)
       )).ToList();
     }
 
