@@ -100,6 +100,7 @@ public class BlogPostServices : IBlogPostServices
 
     var comments = await _context.comments
       .Include(c => c.author)
+      .Include(c => c.likes)
       .Where(c => c.post_id == id && c.is_deleted == false)
       .ToListAsync();
 
@@ -115,6 +116,8 @@ public class BlogPostServices : IBlogPostServices
         c.author_id,
         c.author.UserName ?? string.Empty,
         c.created_at,
+        c.likes.Count,
+        commentLookup[c.id].Count(),
         BuildTree(c.id)
       )).ToList();
     }

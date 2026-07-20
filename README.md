@@ -1,6 +1,6 @@
 # ZBlogAPI
 
-A RESTful backend service for a blogging platform — user registration & auth, blog post publishing, nested comments, and likes on posts/comments. Built with **ASP.NET Core Web API (.NET 8)** and **PostgreSQL**.
+**zblog** is a RESTful blog API built on **ASP.NET Core (.NET 10)** and **PostgreSQL**, offering user registration and authentication via **JWT with refresh token rotation**, role-based authorization (Member, Author, Admin), and full support for posts, nested comments, and likes — powered by **EF Core (Npgsql)**, **ASP.NET Core Identity**, **Serilog**, and **Swagger**, and built to showcase REST API best practices.
 
 ---
 
@@ -117,7 +117,7 @@ erDiagram
 
 ### Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - PostgreSQL 14+
 
 ### Setup
@@ -125,20 +125,25 @@ erDiagram
 ```bash
 # Clone the repo
 git clone <repo-url>
-cd BlogAPI
+cd zblog
 
 # Restore dependencies
 dotnet restore
 
-# Update connection string in appsettings.json / appsettings.Development.json
-# "ConnectionStrings:DefaultConnection": "Host=localhost;Database=blogapi;Username=postgres;Password=yourpassword"
+# Update connection string in appsettings.json
+# "ConnectionStrings:DefaultConnection": "Host=localhost;Database=zblog;Username=postgres;Password=yourpassword"
 
 # Apply EF Core migrations
 dotnet ef database update
 
+# (Optional) Seed test data
+psql -U postgres -d zblog -f Database/seed.sql
+
 # Run the API
 dotnet run
 ```
+
+> Roles (`admin`, `author`, `member`) are seeded automatically at startup via `IdentityRoleSeeder`.
 
 Once running, Swagger UI is available at:
 
@@ -229,10 +234,10 @@ UpdateBlogPostRequestDto  —  PUT  /api/blogpost/{id}
 
 ### Likes
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| POST | `/api/likes` | Like a blog post or a comment | Authorized |
-| DELETE | `/api/likes` | Unlike a blog post or a comment | Authorized |
+| Method | Endpoint | Description | Auth | Responses |
+|---|---|---|---|---|
+| POST | `/api/likes` | Like a blog post or a comment | Member+ | `201` detail, `400`, `401`, `403` |
+| DELETE | `/api/likes` | Unlike a blog post or a comment | Member+ | `204`, `400`, `401`, `403` |
 
 - A like target must be exactly one of: a blog post, or a comment.
 - A user may like a given post/comment at most once (enforced via a unique constraint).
