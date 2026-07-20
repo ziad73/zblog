@@ -17,6 +17,8 @@ using Services.Blog_post.Contracts;
 using Models.Auth;
 using Services.Comment;
 using Services.Comment.Contracts;
+using Services.Like;
+using Services.Like.Contracts;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +36,7 @@ builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IBlogPostServices, BlogPostServices>();
 builder.Services.AddScoped<ICommentServices, CommentServices>();
+builder.Services.AddScoped<ILikeServices, LikeServices>();
 
 // db as a service
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

@@ -229,10 +229,10 @@ UpdateBlogPostRequestDto  —  PUT  /api/blogpost/{id}
 
 ### Likes
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| POST | `/api/likes` | Like a blog post or a comment | Authorized |
-| DELETE | `/api/likes` | Unlike a blog post or a comment | Authorized |
+| Method | Endpoint | Description | Auth | Responses |
+|---|---|---|---|---|
+| POST | `/api/likes` | Like a blog post or a comment | Member+ | `201` detail, `400`, `401`, `403` |
+| DELETE | `/api/likes` | Unlike a blog post or a comment | Member+ | `204`, `400`, `401`, `403` |
 
 - A like target must be exactly one of: a blog post, or a comment.
 - A user may like a given post/comment at most once (enforced via a unique constraint).
