@@ -18,14 +18,17 @@ public record CommentListResponseDto(
   DateTime CreatedAt,
   Guid PostId,
   Guid? ParentCommentId,
-  int LikesCount
+  int LikesCount,
+  int RepliesCount
 );
 
 public record CommentResponseDto(
   Guid Id,
   string Content,
   Guid AuthorId,
-  string AuthorUsername, // include user table
+  string AuthorUsername,
   DateTime CreatedAt,
-  List<CommentResponseDto>? Replies // build tree
+  List<CommentResponseDto>? Replies,
+  int LikesCount,
+  int RepliesCount
 );

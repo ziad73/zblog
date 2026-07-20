@@ -35,7 +35,8 @@ public class CommentServices : ICommentServices
         c.created_at,
         c.post_id,
         c.parent_comment_id,
-        c.likes.Count
+        c.likes.Count,
+        c.replies.Count(r => !r.is_deleted)
       ))
       .AsNoTracking()
       .ToListAsync();
@@ -58,12 +59,12 @@ public class CommentServices : ICommentServices
 
     var allPostComments = await _context.comments
       .Include(c => c.author)
+      .Include(c => c.likes)
       .Where(c => c.post_id == comment.post_id && c.is_deleted == false)
       .ToListAsync();
 
     var commentLookup = allPostComments.ToLookup(c => c.parent_comment_id);
 
-    // Recursively builds a nested reply tree from the lookup.
     List<CommentResponseDto> BuildTree(Guid? parentId)
     {
       return commentLookup[parentId].Select(c => new CommentResponseDto(
@@ -72,7 +73,9 @@ public class CommentServices : ICommentServices
         c.author_id,
         c.author.UserName ?? string.Empty,
         c.created_at,
-        BuildTree(c.id)
+        BuildTree(c.id),
+        c.likes.Count,
+        commentLookup[c.id].Count()
       )).ToList();
     }
 
@@ -82,7 +85,9 @@ public class CommentServices : ICommentServices
       comment.author_id,
       comment.author.UserName ?? string.Empty,
       comment.created_at,
-      BuildTree(comment.id)
+      BuildTree(comment.id),
+      comment.likes.Count,
+      commentLookup[comment.id].Count()
     );
   }
 
