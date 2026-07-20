@@ -25,6 +25,9 @@ public class AuthServices : IAuthServices
     _jwtSettings = jwtSettings;
     _context = context;
   }
+  /// <summary>Registers a new user account, assigns the "member" role, and issues JWT access + refresh tokens.</summary>
+  /// <param name="registerRequestDto">Registration payload with name, username, email, password.</param>
+  /// <returns>Registration result with user details and tokens, or identity errors for duplicates.</returns>
   public async Task<AuthRegisterResult> RegisterAsync(RegisterRequestDto registerRequestDto)
   {  
     var normalizedUsername = registerRequestDto.Username.Trim().ToLowerInvariant();
@@ -109,6 +112,9 @@ public class AuthServices : IAuthServices
     );
   }
 
+  /// <summary>Authenticates a user with username and password, issuing JWT access + refresh tokens.</summary>
+  /// <param name="loginRequestDto">Login payload with username and password.</param>
+  /// <returns>Login result with user details and tokens, or identity errors for invalid credentials.</returns>
   public async Task<AuthLoginResult> LoginAsync(LoginRequestDto loginRequestDto)
   {
     // validate credentials
@@ -164,6 +170,9 @@ public class AuthServices : IAuthServices
       )
     );
   }
+  /// <summary>Revokes the given refresh token, logging the user out of that session.</summary>
+  /// <param name="request">Payload containing the refresh token to revoke.</param>
+  /// <returns>Logout result indicating success, or an error if the token is invalid or already inactive.</returns>
   public async Task<AuthLogoutResult> LogoutAsync(RevokeRequest request)
   {
       var tokenHash = TokenService.HashToken(request.RefreshToken);
@@ -187,7 +196,13 @@ public class AuthServices : IAuthServices
       );
   }
 
-  // JWT token expired? use refresh token to generate new one without manual logging in
+  /// <summary>
+  /// Exchanges a valid refresh token for a new JWT access token with rotation.
+  /// Validates the token, detects reuse (revokes all active tokens if stolen),
+  /// rotates the old token, and issues a new access token.
+  /// </summary>
+  /// <param name="request">Payload containing the current refresh token.</param>
+  /// <returns>Refresh result with new access token and rotated refresh token, or an error.</returns>
   public async Task<AuthRefreshResult> RefreshAsync(RefreshRequest request)
   {
       /* I do four things(checks) to refresh token before creating a new jwt token:
@@ -270,6 +285,11 @@ public class AuthServices : IAuthServices
       );
   }
 
+  /// <summary>
+  /// Revokes all active refresh tokens for a given user.
+  /// Called when a reused (stolen) refresh token is detected during refresh.
+  /// </summary>
+  /// <param name="userId">The ID of the user whose tokens should be revoked.</param>
   private async Task RevokeAllActiveTokensAsync(Guid userId)
   {
       var activeTokens = await _context.refresh_tokens
@@ -284,6 +304,9 @@ public class AuthServices : IAuthServices
       await _context.SaveChangesAsync();
   }
 
+  /// <summary>Revokes a specific refresh token directly by marking it as inactive.</summary>
+  /// <param name="request">Payload containing the refresh token to revoke.</param>
+  /// <returns>Logout result indicating success, or an error if the token is not found or already inactive.</returns>
   public async Task<AuthLogoutResult> RevokeAsync(RevokeRequest request)
   {
       var tokenHash = TokenService.HashToken(request.RefreshToken);

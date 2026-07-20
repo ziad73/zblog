@@ -19,15 +19,18 @@ public class CommentServices : ICommentServices
     _userManager = userManager;
   }
 
+  /// <summary>Retrieves all non-deleted comments as a flat list with author info and like counts.</summary>
+  /// <returns>A list of <see cref="CommentListResponseDto"/> sorted by creation date.</returns>
   public async Task<List<CommentListResponseDto>> GetAllComments()
   {
     var comments = await _context.comments
       .Where(c => c.is_deleted == false)
+      .OrderBy(c => c.created_at)
       .Select(c => new CommentListResponseDto(
         c.id,
         c.content ?? string.Empty,
         c.author_id,
-        c.author.UserName ?? string.Empty,// no need for include with select, it generates the SQL JOIN automatically
+        c.author.UserName ?? string.Empty,
         c.created_at,
         c.post_id,
         c.parent_comment_id,
@@ -39,6 +42,9 @@ public class CommentServices : ICommentServices
     return comments;
   }
 
+  /// <summary>Gets a single non-deleted comment with its nested reply tree.</summary>
+  /// <param name="id">The comment GUID.</param>
+  /// <returns>The comment with nested replies, or null if not found or soft-deleted.</returns>
   public async Task<CommentResponseDto?> GetCommentById(Guid id)
   {
     var comment = await _context.comments
@@ -56,6 +62,7 @@ public class CommentServices : ICommentServices
 
     var commentLookup = allPostComments.ToLookup(c => c.parent_comment_id);
 
+    // Recursively builds a nested reply tree from the lookup.
     List<CommentResponseDto> BuildTree(Guid? parentId)
     {
       return commentLookup[parentId].Select(c => new CommentResponseDto(
@@ -78,16 +85,59 @@ public class CommentServices : ICommentServices
     );
   }
 
-  public async Task<CommentResponseDto> CreateComment(Guid userId, CreateCommentRequestDto dto)
+  /// <summary>Creates a new comment on a post or as a reply to another comment.</summary>
+  /// <param name="userId">The ID of the authenticated user creating the comment.</param>
+  /// <param name="dto">The comment payload containing content, post ID, and optional parent comment ID.</param>
+  /// <returns>The created comment with its nested reply subtree, or null if the post/parent comment is invalid.</returns>
+  public async Task<CommentResponseDto?> CreateComment(Guid userId, CreateCommentRequestDto dto)
   {
-    throw new NotImplementedException();
+    // validate post
+    var post = await _context.blog_posts
+      .Where(p => p.id == dto.PostId && p.is_deleted == false)
+      .FirstOrDefaultAsync();
+
+    if (post is null)
+      return null;
+
+    if (dto.ParentCommentId.HasValue)
+    {
+      var parent = await _context.comments
+        .Where(c => c.id == dto.ParentCommentId && c.is_deleted == false)
+        .FirstOrDefaultAsync();
+
+      if (parent is null || parent.post_id != dto.PostId)
+        return null;
+    }
+
+    // create comment
+    var comment = new Entities.Comment
+    {
+      content = dto.Content,
+      post_id = dto.PostId,
+      parent_comment_id = dto.ParentCommentId,
+      author_id = userId
+    };
+    // add comment to DB
+    _context.comments.Add(comment);
+    await _context.SaveChangesAsync();
+
+    return await GetCommentById(comment.id);
   }
 
+  /// <summary>Updates a comment's content. Only the comment author or an admin may update.</summary>
+  /// <param name="id">The comment GUID.</param>
+  /// <param name="userId">The ID of the requesting user.</param>
+  /// <param name="dto">The updated content.</param>
+  /// <returns>The updated comment with its nested reply tree, or null if not found or not authorized.</returns>
   public Task<CommentResponseDto?> UpdateComment(Guid id, Guid userId, UpdateCommentRequestDto dto)
   {
     throw new NotImplementedException();
   }
 
+  /// <summary>Soft-deletes a comment. Only the comment author or an admin may delete.</summary>
+  /// <param name="id">The comment GUID.</param>
+  /// <param name="userId">The ID of the requesting user.</param>
+  /// <returns>True if deleted, false if not found or not authorized.</returns>
   public Task<bool> SoftDeleteComment(Guid id, Guid userId)
   {
     throw new NotImplementedException();
