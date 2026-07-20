@@ -129,9 +129,30 @@ public class CommentServices : ICommentServices
   /// <param name="userId">The ID of the requesting user.</param>
   /// <param name="dto">The updated content.</param>
   /// <returns>The updated comment with its nested reply tree, or null if not found or not authorized.</returns>
-  public Task<CommentResponseDto?> UpdateComment(Guid id, Guid userId, UpdateCommentRequestDto dto)
+  public async Task<CommentResponseDto?> UpdateComment(Guid id, Guid userId, UpdateCommentRequestDto dto)
   {
-    throw new NotImplementedException();
+    // find comment
+    var comment = await _context.comments
+      .Where(c => c.id == id && c.is_deleted == false)
+      .FirstOrDefaultAsync();
+
+    if (comment is null)
+      return null;
+    // Ownership check: is it owner or admin?
+    if (comment.author_id != userId)
+    {
+      var requestingUser = await _userManager.FindByIdAsync(userId.ToString());
+      //  check IsInRoleAsync("admin") → not owner & not admin → return null
+      if (requestingUser is null || !await _userManager.IsInRoleAsync(requestingUser, "admin"))
+        return null;
+    }
+
+    // update comment
+    comment.content = dto.Content;
+    comment.updated_at = DateTime.UtcNow;
+    await _context.SaveChangesAsync();
+
+    return await GetCommentById(comment.id);
   }
 
   /// <summary>Soft-deletes a comment. Only the comment author or an admin may delete.</summary>
