@@ -179,6 +179,12 @@ builder.Services.AddAuthorization(options =>
     //     policy.RequireClaim("custom_claim", "custom_value"));
 });
 
+// Register in-memory cache in DI 
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 10_000; // Limit total cache size to prevent unbounded growth
+});
+
 var app = builder.Build();
 
 

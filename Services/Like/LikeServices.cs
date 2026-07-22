@@ -1,6 +1,7 @@
 using Database;
 using Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Models.Like;
 using Services.Like.Contracts;
 
@@ -9,10 +10,12 @@ namespace Services.Like;
 public class LikeServices : ILikeServices
 {
   private readonly ApplicationDbContext _context;
+  private readonly IMemoryCache _cache;
 
-  public LikeServices(ApplicationDbContext context)
+  public LikeServices(ApplicationDbContext context, IMemoryCache cache)
   {
     _context = context;
+    _cache = cache;
   }
 
   /// <summary>Likes a blog post or a comment. A user may like a given target at most once.(PostId XOR CommentId)</summary>
@@ -71,6 +74,18 @@ public class LikeServices : ILikeServices
     _context.likes.Add(like);
     await _context.SaveChangesAsync();
 
+    if (dto.PostId.HasValue)
+      _cache.Remove($"blogpost:{dto.PostId}");
+    else
+    {
+      var likedComment = await _context.comments
+        .Where(c => c.id == dto.CommentId)
+        .Select(c => c.post_id)
+        .FirstOrDefaultAsync();
+      _cache.Remove($"comments:{likedComment}");
+      _cache.Remove($"comment:{dto.CommentId}");
+    }
+
     return new LikeResponseDto(
       like.id,
       like.user_id,
@@ -104,6 +119,18 @@ public class LikeServices : ILikeServices
 
     if (like is null)
       return false;
+
+    if (postId.HasValue)
+      _cache.Remove($"blogpost:{postId}");
+    else
+    {
+      var unlikedComment = await _context.comments
+        .Where(c => c.id == commentId)
+        .Select(c => c.post_id)
+        .FirstOrDefaultAsync();
+      _cache.Remove($"comments:{unlikedComment}");
+      _cache.Remove($"comment:{commentId}");
+    }
 
     _context.likes.Remove(like);
     await _context.SaveChangesAsync();
