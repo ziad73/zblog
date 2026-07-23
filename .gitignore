@@ -55,4 +55,4 @@ Desktop.ini
 logs/
 .codex
 test-info.txt
-
+BenchmarkDotNet.Artifacts/
