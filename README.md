@@ -10,6 +10,7 @@
 - **Blog Posts** — full CRUD with soft delete and ownership checks
 - **Nested Comments** — arbitrary-depth threaded replies on posts and other comments
 - **Likes** — like/unlike posts or comments, with strict duplicate-like prevention
+- **In-Memory Caching** — `IMemoryCache` with configurable sliding/absolute expiration, automatic cache invalidation on writes (size-limited to 10,000 entries)
 - **Soft Deletion** — posts and comments are soft-deleted for auditability and recoverability
 - **Self-Documenting API** — Swagger/OpenAPI available at `/swagger`
 
@@ -30,6 +31,7 @@
 | Database | PostgreSQL |
 | Auth | ASP.NET Core Identity (role-based) |
 | Docs | Swagger / OpenAPI |
+| Caching | `IMemoryCache` (in-process, size-limited) |
 
 ---
 
@@ -260,6 +262,7 @@ UpdateBlogPostRequestDto  —  PUT  /api/blogpost/{id}
 - **Data Integrity** — foreign keys enforced at the database level; unique constraints on likes and auth fields.
 - **Auditability** — `created_at` / `updated_at` on all major entities; soft-delete flags (`is_deleted`, `deleted_at`) on posts and comments.
 - **Documentation** — Swagger/OpenAPI at `/swagger`.
+- **Caching** — Read endpoints use `IMemoryCache` with 5-minute sliding / 30-minute absolute expiration. Cache is automatically invalidated on any write to the affected entity (post create/update/delete, comment create/update/delete, like/unlike). Size limited to 10,000 entries.
 
 ---
 
