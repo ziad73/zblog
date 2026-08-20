@@ -4,6 +4,7 @@ services:
       target: development
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Serilog__WriteTo__1__Args__path: /tmp/zblog/log-.txt
     volumes:
       - .:/src:ro        # source read-only to the container
       - /src/bin         # anonymous, writable, isolated build output
