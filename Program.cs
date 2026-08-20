@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Diagnostics;
 using Serilog;
 using Services.Auth;
 using Services.Auth.Contracts;
@@ -200,10 +201,22 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler("/Error"); // Production friendly error fallback
+    // Production friendly JSON error fallback (no /Error route exists in this API)
+    app.UseExceptionHandler(handler =>
+    {
+        handler.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                Status = 500,
+                Message = "An unexpected error occurred."
+            });
+        });
+    });
 }
 // app.UseHsts();
-app.UseHttpsRedirection();
+// TLS is terminated at the edge (reverse proxy / load balancer), so no HTTPS redirection here.
 // app.UseStaticFiles();
 // logging
 app.UseSerilogRequestLogging();
@@ -218,6 +231,12 @@ app.UseAuthorization(); // validates access permissions for the current authenti
 // Custom middleware
 app.MapControllers();
 
-await Database.IdentityRoleSeeder.SeedAsync(app.Services);
+using var startupScope = app.Services.CreateScope();
+var db = startupScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+// Apply EF Core migrations to the database before the app starts serving traffic.
+await db.Database.MigrateAsync();
+
+await Database.IdentityRoleSeeder.SeedAsync(startupScope.ServiceProvider);
 
 app.Run();

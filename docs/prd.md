@@ -5,14 +5,14 @@
 | Document Owner | Ziad El-Sayed |
 | Status | Draft |
 | Version | 1.0 |
-| Last Updated | 2026-07-05 |
+| Last Updated | 2026-08-20 |
 | Source Reference | BlogAPI README (denizciMert/BlogAPI) |
 
 ---
 
 ## 1. Overview
 
-BlogAPI is a RESTful backend service that allows users to register, authenticate, publish blog posts, comment (including nested replies), and like posts or comments. This PRD re-scopes the original .NET 8 / EF Core / SQL Server / ASP.NET Identity implementation onto a **PostgreSQL** data layer, and defines the functional and non-functional requirements needed to build or re-platform the system.
+BlogAPI is a RESTful backend service that allows users to register, authenticate, publish blog posts, comment (including nested replies), and like posts or comments. This PRD re-scopes the original .NET 8 / EF Core / SQL Server / ASP.NET Identity implementation onto a **PostgreSQL** data layer, and defines the functional and non-functional requirements needed to build or re-platform the system. The implementation targets **.NET 10**. (Containerization is covered in §5.)
 
 ## 2. Goals
 
@@ -40,9 +40,11 @@ BlogAPI is a RESTful backend service that allows users to register, authenticate
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/api/account/register` | Register a new user | Public |
-| POST | `/api/account/login` | Authenticate a user, issue session/token | Public |
-| POST | `/api/account/logout` | Terminate the current session | Authenticated |
+| POST | `/api/auth/register` | Register a new user; returns access + refresh tokens | Public |
+| POST | `/api/auth/login` | Authenticate a user, issue access + refresh tokens | Public |
+| POST | `/api/auth/refresh` | Exchange a refresh token for a new access token (rotation) | Public |
+| POST | `/api/auth/logout` | Revoke the given refresh token (session-based logout) | Authenticated |
+| POST | `/api/auth/revoke` | Revoke a specific refresh token directly | Authenticated |
 
 **Requirements:**
 - Passwords must be hashed (never stored in plaintext).
@@ -53,7 +55,7 @@ BlogAPI is a RESTful backend service that allows users to register, authenticate
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/api/blogpost` | List all blog posts (excludes soft-deleted) | Public |
+| GET | `/api/blogpost` | List all blog posts (excludes soft-deleted) | Member+ |
 | GET | `/api/blogpost/{id}` | Get a single blog post | Public |
 | POST | `/api/blogpost` | Create a new blog post | Authorized |
 | PUT | `/api/blogpost/{id}` | Update a blog post (owner or Admin) | Authorized |
@@ -93,12 +95,15 @@ BlogAPI is a RESTful backend service that allows users to register, authenticate
 
 ## 5. Non-Functional Requirements
 
-- **Database:** PostgreSQL (replacing SQL Server in the original implementation).
-- **Framework:** ASP.NET Core Web API (.NET 8), Entity Framework Core with the `Npgsql` provider.
-- **Auth:** ASP.NET Core Identity, backed by PostgreSQL, using role-based authorization.
+- **Database:** PostgreSQL 16 (replacing SQL Server in the original implementation).
+- **Framework:** ASP.NET Core Web API (.NET 10), Entity Framework Core with the `Npgsql` provider.
+- **Auth:** ASP.NET Core Identity, backed by PostgreSQL, using role-based authorization + JWT (with refresh-token rotation).
 - **Documentation:** Swagger/OpenAPI available at a discoverable route (e.g., `/swagger`).
+- **Deployment:** Containerized via a multi-stage `Dockerfile`; **Docker Compose** with a shared `compose.yml` plus environment-specific overrides (`compose.dev.yml` for hot-reload development, `compose.prod.yml` for the slim production runtime). Configuration is injected via environment variables (`.env`), not baked into images.
+- **Logging:** Serilog — Console/stdout output in containers (captured by `docker compose logs`); file sink used for local (non-Docker) development only.
 - **Data Integrity:** Foreign keys enforced at the database level; unique constraints for likes and account fields.
 - **Auditability:** `created_at` / `updated_at` on all major entities; soft-delete flags (`is_deleted`, `deleted_at`) on posts and comments.
+- **Migrations & Seeding:** EF Core migrations applied automatically at application startup; roles (`admin`, `author`, `member`) seeded automatically via `IdentityRoleSeeder`; richer test data (`Database/seed.sql`) applied manually on demand.
 
 ## 6. Database Schema (PostgreSQL)
 
