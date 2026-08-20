@@ -1,6 +1,6 @@
 # ZBlogAPI
 
-**zblog** is a RESTful blog API built on **ASP.NET Core (.NET 10)** and **PostgreSQL**, offering user registration and authentication via **JWT with refresh token rotation**, role-based authorization (Member, Author, Admin), and full support for posts, nested comments, and likes — powered by **EF Core (Npgsql)**, **ASP.NET Core Identity**, **Serilog**, and **Swagger**, and built to showcase REST API best practices.
+**zblog** is a RESTful blog API built on **ASP.NET Core (.NET 10)** and **PostgreSQL**, offering user registration and authentication via **JWT with refresh token rotation**, role-based authorization (Member, Author, Admin), and full support for posts, nested comments, and likes — powered by **EF Core (Npgsql)**, **ASP.NET Core Identity**, **Serilog**, and **Swagger** — shipped containerized via a multi-stage **Docker** image with dev/prod **Docker Compose** profiles, and built to showcase REST API best practices.
 
 ---
 
@@ -25,11 +25,12 @@
 
 | Layer | Technology |
 |---|---|
-| Framework | ASP.NET Core Web API (.NET 8) |
+| Framework | ASP.NET Core Web API (.NET 10) |
 | ORM | Entity Framework Core (`Npgsql` provider) |
-| Database | PostgreSQL |
+| Database | PostgreSQL 16 |
 | Auth | ASP.NET Core Identity (role-based) |
 | Docs | Swagger / OpenAPI |
+| Deployment | Docker (multi-stage `Dockerfile`) + Docker Compose (`compose.yml` / `compose.dev.yml` / `compose.prod.yml`) |
 
 ---
 
@@ -117,10 +118,11 @@ erDiagram
 
 ### Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- PostgreSQL 14+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) — to run locally
+- PostgreSQL 14+ — to run locally
+- [Docker](https://www.docker.com/) + Docker Compose — to run containerized
 
-### Setup
+### Run locally (no Docker)
 
 ```bash
 # Clone the repo
@@ -143,13 +145,79 @@ psql -U postgres -d zblog -f Database/seed.sql
 dotnet run
 ```
 
-> Roles (`admin`, `author`, `member`) are seeded automatically at startup via `IdentityRoleSeeder`.
+### Run with Docker
+
+The project ships a multi-stage `Dockerfile` plus a split Compose setup — `compose.yml` (shared), `compose.dev.yml`, and `compose.prod.yml`. Configuration is injected via a local `.env` file (gitignored), not baked into images.
+
+Create a `.env` file in the project root:
+
+```bash
+POSTGRES_DB=zblog
+POSTGRES_USER=my_user
+POSTGRES_PASSWORD=changeme
+
+JWT_KEY=<strong-random-secret-at-least-32-chars>
+JWT_ISSUER=http://localhost:5112
+JWT_AUDIENCE=http://localhost:5112
+
+API_PORT=5112
+```
+
+**Development** (hot reload via `dotnet watch`, source bind-mounted):
+
+```bash
+docker compose -f compose.yml -f compose.dev.yml up --build
+```
+
+**Production** (slim runtime image, no SDK):
+
+```bash
+docker compose -f compose.yml -f compose.prod.yml up -d --build
+```
 
 Once running, Swagger UI is available at:
 
 ```
-https://localhost:<port>/swagger
+http://localhost:5112/swagger
 ```
+
+View logs:
+
+```bash
+docker compose logs -f api
+```
+
+#### Database & seeding in Docker
+
+- **Migrations are applied automatically at startup** (before the app serves traffic).
+- **Roles** (`admin`, `author`, `member`) are seeded automatically via `IdentityRoleSeeder`.
+- **Test data** (`Database/seed.sql`) is **manual** and applied on demand:
+
+```bash
+docker compose exec -T db psql -U my_user -d zblog < Database/seed.sql
+```
+
+  Seed users: `alice` (admin), `author1`, `author2` (authors), `bob`, `charlie` (members). Password for all: `P@ssw0rd123`. The script truncates and re-inserts, so re-running it is safe.
+
+Interactive DB shell:
+
+```bash
+docker compose exec db psql -U my_user -d zblog
+```
+
+> **Logging:** inside containers, Serilog is Console-only — logs go to stdout and are captured by `docker compose logs` (file sink is used for local, non-Docker development only).
+
+#### Teardown
+
+```bash
+# Stop containers, keep the Postgres data volume
+docker compose down
+
+# Stop containers AND delete the Postgres data volume (irreversible)
+docker compose down -v
+```
+
+> Roles (`admin`, `author`, `member`) are seeded automatically at startup via `IdentityRoleSeeder`.
 
 ---
 
