@@ -11,6 +11,7 @@ obj/
 secrets.json
 appsettings.Development.json
 appsettings.Local.json
+.env
 
 ##   IDE-Specific Temp Files (Visual Studio & VS Code)
 .vs/
