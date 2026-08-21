@@ -14,9 +14,9 @@ services:
       JwtSettings__Key: ${JWT_KEY}
       JwtSettings__Issuer: ${JWT_ISSUER}
       JwtSettings__Audience: ${JWT_AUDIENCE}
-    depends_on:
+    depends_on:                               # API service not started until DB service is ready && healthy
       db:
-        condition: service_healthy
+        condition: service_healthy            # Wait for postgres-db to be HEALTHY before starting app
 
   db:
     image: postgres:16
@@ -29,6 +29,7 @@ services:
     networks:
       - zblog-net
     healthcheck:
+      # pg_isready checks if the PostgreSQL server is accepting connections
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s

@@ -23,6 +23,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS production
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:5112
 EXPOSE 5112
-# USER $APP_UID  # Non-Root Execution in Production
+
 COPY --from=build /app/publish .
+
+# Non-root execution (ASP.NET 10 image provides $APP_UID / 'app' user)
+# environment variable set via ENV APP_UID=1654
+USER $APP_UID
+
 ENTRYPOINT ["dotnet", "zblog.dll"]
